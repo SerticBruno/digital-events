@@ -44,6 +44,7 @@ export default function DataTable({
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isTransitioning, setIsTransitioning] = useState(false)
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
@@ -80,6 +81,15 @@ export default function DataTable({
     const startIndex = (currentPage - 1) * itemsPerPage
     return filteredAndSortedData.slice(startIndex, startIndex + itemsPerPage)
   }, [filteredAndSortedData, currentPage, itemsPerPage, pagination])
+
+  // Page change handler with transition
+  const handlePageChange = (newPage: number) => {
+    setIsTransitioning(true)
+    setTimeout(() => {
+      setCurrentPage(newPage)
+      setIsTransitioning(false)
+    }, 150) // 150ms transition
+  }
 
   const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage)
 
@@ -197,7 +207,9 @@ export default function DataTable({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className={`bg-white divide-y divide-gray-200 transition-all duration-150 ease-in-out ${
+            isTransitioning ? 'opacity-50 blur-sm' : 'opacity-100 blur-0'
+          }`}>
             {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-6 py-12 text-center">
@@ -249,35 +261,36 @@ export default function DataTable({
             <div className="text-sm text-gray-700">
               Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAndSortedData.length)} of {filteredAndSortedData.length} results
             </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-1 text-sm border rounded-md ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
+                         <div className="flex items-center space-x-2">
+               <button
+                 onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
+                 disabled={currentPage === 1 || isTransitioning}
+                 className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+               >
+                 Previous
+               </button>
+               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                 <button
+                   key={page}
+                   onClick={() => handlePageChange(page)}
+                   disabled={isTransitioning}
+                   className={`px-3 py-1 text-sm border rounded-md transition-colors ${
+                     currentPage === page
+                       ? 'bg-blue-600 text-white border-blue-600'
+                       : 'border-gray-300 hover:bg-gray-50'
+                   }`}
+                 >
+                   {page}
+                 </button>
+               ))}
+               <button
+                 onClick={() => handlePageChange(Math.min(currentPage + 1, totalPages))}
+                 disabled={currentPage === totalPages || isTransitioning}
+                 className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+               >
+                 Next
+               </button>
+             </div>
           </div>
         </div>
       )}
