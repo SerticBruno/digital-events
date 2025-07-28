@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { CheckCircle, XCircle, UserPlus, Calendar, MapPin, RefreshCw } from 'lucide-react'
+import { CheckCircle, XCircle, UserPlus, Calendar, MapPin } from 'lucide-react'
 import { InvitationData } from '@/lib/types'
 
 interface Guest {
@@ -96,7 +96,7 @@ export default function RespondPage() {
         plusOneEmail: responseType === 'coming_with_plus_one' ? plusOneEmail : undefined
       }
 
-      console.log('Submitting response:', responseData)
+
 
       const response = await fetch('/api/guests/respond', {
         method: 'POST',
@@ -111,7 +111,7 @@ export default function RespondPage() {
       }
 
       const result = await response.json()
-      console.log('Response submitted successfully:', result)
+      
 
       setSubmitted(true)
     } catch (error) {
@@ -262,28 +262,7 @@ export default function RespondPage() {
               )}
             </div>
 
-            {/* Debug Info */}
-            {invitation && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="text-sm font-semibold text-yellow-800 mb-2">Debug Info:</h4>
-                    <div className="text-xs text-yellow-700 space-y-1">
-                      <div>Status: {invitation.status}</div>
-                      <div>Response: {invitation.response || 'None'}</div>
-                      <div>Responded At: {invitation.respondedAt ? new Date(invitation.respondedAt).toLocaleString() : 'Not responded'}</div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={fetchGuestData}
-                    className="text-yellow-700 hover:text-yellow-900"
-                    title="Refresh data"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
+
 
             {/* Response Options */}
             {!showPlusOneForm ? (

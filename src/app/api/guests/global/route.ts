@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
     // Create new guest globally (without event) using raw SQL
     const guestId = randomUUID()
     await prisma.$executeRaw`
-      INSERT INTO guests (id, email, firstName, lastName, company, position, phone, isVip, createdAt, updatedAt)
-      VALUES (${guestId}, ${email}, ${firstName}, ${lastName}, ${company || null}, ${position || null}, ${phone || null}, ${isVip || false}, datetime('now'), datetime('now'))
+      INSERT INTO guests (id, email, firstName, lastName, company, position, phone, isVip, isPlusOne, createdAt, updatedAt)
+      VALUES (${guestId}, ${email}, ${firstName}, ${lastName}, ${company || null}, ${position || null}, ${phone || null}, ${isVip || false}, false, datetime('now'), datetime('now'))
     `
     
     const guest = {
@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
       company: company || null,
       position: position || null,
       phone: phone || null,
-      isVip: isVip || false
+      isVip: isVip || false,
+      isPlusOne: false
     }
 
     return NextResponse.json(guest, { status: 201 })
