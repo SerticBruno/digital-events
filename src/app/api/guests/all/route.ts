@@ -10,6 +10,7 @@ interface TransformedGuest {
   position: string | null
   phone: string | null
   isVip: boolean
+  isPlusOne: boolean
   event: {
     id: string
     name: string
@@ -29,6 +30,7 @@ export async function GET() {
         position: true,
         phone: true,
         isVip: true,
+        isPlusOne: true,
       },
       take: 50 // Limit results
     })

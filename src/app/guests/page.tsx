@@ -15,6 +15,7 @@ interface Guest {
   position?: string
   phone?: string
   isVip: boolean
+  isPlusOne: boolean
   eventGuests?: Array<{
     event: {
       id: string
@@ -107,102 +108,159 @@ export default function GuestsPage() {
     }
   }
 
+  const deleteGuest = async (guestId: string, guestName: string) => {
+    if (!confirm(`Are you sure you want to permanently delete ${guestName}? This action cannot be undone and will remove them from all events.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/guests/global?guestId=${guestId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        alert(`Guest ${guestName} has been permanently deleted.`)
+        await fetchGuests()
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete guest')
+      }
+    } catch (error) {
+      console.error('Failed to delete guest:', error)
+      alert(`Failed to delete guest: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Page Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Guest Management</h1>
-              <p className="text-gray-600">Manage all guests globally</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Guest Management Header */}
+        <div className="mb-8">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Guest Management</h2>
+              <p className="text-gray-600">Manage all guests globally across all events</p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex gap-2 ml-4">
               <button
                 onClick={() => setShowGuestModal(true)}
-                className={getButtonClasses('primary')}
+                className={`${getButtonClasses('primary')} flex items-center gap-2`}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Guest
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Guest</span>
               </button>
               <button
                 onClick={() => setShowCSVModal(true)}
-                className={getButtonClasses('secondary')}
+                className={`${getButtonClasses('secondary')} flex items-center gap-2`}
               >
-                <Upload className="w-4 h-4 mr-2" />
-                Bulk Import
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">Bulk Import</span>
               </button>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search guests by name, email, or company..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+        {/* Search & Filters */}
+        <div className={`${componentStyles.card.base} mb-8`}>
+          <div className={componentStyles.card.header}>
+            <h3 className="text-lg font-medium text-gray-900 flex items-center">
+              <Search className="w-5 h-5 mr-2" />
+              Search & Filter Guests
+            </h3>
+          </div>
+          <div className={componentStyles.card.content}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search guests by name, email, or company..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            {searchTerm && (
+              <div className="mt-3 text-sm text-gray-600">
+                Found {filteredGuests.length} of {guests.length} guests
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <Users className="w-8 h-8 text-blue-600 mr-3" />
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{guests.length}</div>
-                <div className="text-sm text-gray-600">Total Guests</div>
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+            <div className="flex items-center p-6">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Guests</p>
+                <p className="text-2xl font-bold text-gray-900">{guests.length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <Crown className="w-8 h-8 text-yellow-600 mr-3" />
-              <div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {guests.filter(g => g.isVip).length}
-                </div>
-                <div className="text-sm text-gray-600">VIP Guests</div>
+          <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+            <div className="flex items-center p-6">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Crown className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">VIP Guests</p>
+                <p className="text-2xl font-bold text-gray-900">{guests.filter(g => g.isVip).length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <Mail className="w-8 h-8 text-green-600 mr-3" />
-              <div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {guests.filter(g => g.email).length}
-                </div>
-                <div className="text-sm text-gray-600">With Email</div>
+          <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+            <div className="flex items-center p-6">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Mail className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">With Email</p>
+                <p className="text-2xl font-bold text-gray-900">{guests.filter(g => g.email).length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <Building className="w-8 h-8 text-purple-600 mr-3" />
-              <div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {new Set(guests.filter(g => g.company).map(g => g.company)).size}
-                </div>
-                <div className="text-sm text-gray-600">Companies</div>
+          <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+            <div className="flex items-center p-6">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Building className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Companies</p>
+                <p className="text-2xl font-bold text-gray-900">{new Set(guests.filter(g => g.company).map(g => g.company)).size}</p>
+              </div>
+            </div>
+          </div>
+          <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+            <div className="flex items-center p-6">
+              <div className="p-2 bg-indigo-100 rounded-lg">
+                <User className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Plus-One Guests</p>
+                <p className="text-2xl font-bold text-gray-900">{guests.filter(g => g.isPlusOne).length}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Guests Table */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">All Guests</h2>
+        {/* Guest List Table */}
+        <div className={componentStyles.card.base}>
+          <div className={componentStyles.card.header}>
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">All Guests</h3>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span>Total: {guests.length}</span>
+                {searchTerm && (
+                  <>
+                    <span>•</span>
+                    <span>Filtered: {filteredGuests.length}</span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
           
           {loading ? (
@@ -243,7 +301,13 @@ export default function GuestsPage() {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Plus-One
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Events
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -285,6 +349,13 @@ export default function GuestsPage() {
                           {guest.isVip ? 'VIP' : 'Regular'}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          guest.isPlusOne ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {guest.isPlusOne ? 'Plus-One Guest' : 'Regular Guest'}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {guest.eventGuests && guest.eventGuests.length > 0 ? (
                           <div>
@@ -297,6 +368,14 @@ export default function GuestsPage() {
                         ) : (
                           <span className="text-gray-400">No events</span>
                         )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => deleteGuest(guest.id, `${guest.firstName} ${guest.lastName}`)}
+                          className="text-red-600 hover:text-red-900 font-medium"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}

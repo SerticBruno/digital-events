@@ -47,13 +47,11 @@ export interface InvitationData {
   eventId: string
 }
 
-export interface QRCodeData {
+export interface QRCode {
   id: string
   code: string
   type: string
-  isUsed: boolean
-  usedAt?: Date
-  createdAt: Date
-  guestId: string
-  eventId: string
+  status: string // CREATED, ACTIVE, USED, EXPIRED
+  usedAt?: string
+  createdAt: string
 } 

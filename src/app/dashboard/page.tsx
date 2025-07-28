@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User, RefreshCw, Edit, Trash2 } from 'lucide-react'
+import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User, RefreshCw, Edit, Trash2, Calendar, MapPin } from 'lucide-react'
 import EventForm from '@/components/EventForm'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
@@ -29,6 +29,7 @@ interface Guest {
   email: string
   company?: string
   isVip: boolean
+  isPlusOne: boolean
   invitations: Array<{
     type: string
     status: string
@@ -40,7 +41,7 @@ interface Guest {
   qrCodes: Array<{
     code: string
     type: string
-    isUsed: boolean
+    status: string
     usedAt?: string
   }>
 }
@@ -56,7 +57,7 @@ export default function Dashboard() {
   const [showExistingGuestModal, setShowExistingGuestModal] = useState(false)
   const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set())
   const [sendingEmails, setSendingEmails] = useState(false)
-  const [updatingPlusOne, setUpdatingPlusOne] = useState(false)
+
   const [refreshing, setRefreshing] = useState(false)
   const [showEditEventModal, setShowEditEventModal] = useState(false)
   const [showEditGuestModal, setShowEditGuestModal] = useState(false)
@@ -203,33 +204,7 @@ export default function Dashboard() {
     setSelectedGuests(new Set())
   }
 
-  const togglePlusOne = async (guestId: string, currentHasPlusOne: boolean) => {
-    if (!selectedEvent) return
 
-    setUpdatingPlusOne(true)
-    try {
-      const response = await fetch('/api/guests/plus-one', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          guestId, 
-          eventId: selectedEvent.id, 
-          hasPlusOne: !currentHasPlusOne 
-        })
-      })
-
-      if (response.ok) {
-        await fetchGuests(selectedEvent.id)
-      } else {
-        alert('Failed to update plus-one status')
-      }
-    } catch (error) {
-      console.error('Failed to update plus-one status:', error)
-      alert('Failed to update plus-one status')
-    } finally {
-      setUpdatingPlusOne(false)
-    }
-  }
 
   const testEmail = async () => {
     const testEmail = prompt('Enter email address for testing (use budasevo.trouts@gmail.com for testing):')
@@ -648,6 +623,51 @@ export default function Dashboard() {
     }
   }
 
+  const deleteSelectedGuests = async () => {
+    if (!selectedEvent) return
+
+    if (selectedGuests.size === 0) {
+      alert('Please select guests to delete')
+      return
+    }
+
+    const selectedGuestNames = Array.from(selectedGuests).map(id => {
+      const guest = guests.find(g => g.id === id)
+      return guest ? `${guest.firstName} ${guest.lastName}` : 'Unknown'
+    })
+
+    if (!confirm(`Are you sure you want to permanently delete ${selectedGuests.size} guest(s)? This action cannot be undone and will remove them from all events.\n\nGuests to delete:\n${selectedGuestNames.join('\n')}`)) {
+      return
+    }
+
+    setSendingEmails(true)
+    try {
+      const deletePromises = Array.from(selectedGuests).map(guestId => 
+        fetch(`/api/guests/global?guestId=${guestId}`, {
+          method: 'DELETE'
+        })
+      )
+
+      const results = await Promise.all(deletePromises)
+      const successCount = results.filter(r => r.ok).length
+      const failureCount = results.length - successCount
+
+      let message = `Successfully deleted ${successCount} guest(s)`
+      if (failureCount > 0) {
+        message += `, ${failureCount} failed`
+      }
+
+      alert(message)
+      clearSelection()
+      await fetchGuests(selectedEvent.id)
+    } catch (error) {
+      console.error('Failed to delete guests:', error)
+      alert('Failed to delete guests')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -661,93 +681,190 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Page Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Event Dashboard</h1>
-              <p className="text-gray-600">Manage your events and guests</p>
+
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Event Selection & Management */}
+        <div className="mb-8">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Event Dashboard</h2>
+              {selectedEvent ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xl font-semibold text-gray-800">{selectedEvent.name}</h3>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Active Event
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                    {selectedEvent.date && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {new Date(selectedEvent.date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    )}
+                    {selectedEvent.location && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        {selectedEvent.location}
+                      </div>
+                    )}
+                  </div>
+                  {selectedEvent.description && (
+                    <p className="text-sm text-gray-600 max-w-2xl">
+                      {selectedEvent.description}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-600">Select an event to get started</p>
+              )}
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex gap-2 ml-4">
               <button
                 onClick={() => selectedEvent && fetchGuests(selectedEvent.id)}
                 disabled={refreshing}
-                className={getButtonClasses('secondary')}
+                className={`${getButtonClasses('secondary')} flex items-center gap-2`}
               >
                 <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                {refreshing ? 'Refreshing...' : 'Refresh'}
+                <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
               </button>
               <a
                 href="/scanner"
-                className={getButtonClasses('warning')}
+                className={`${getButtonClasses('warning')} flex items-center gap-2`}
               >
                 <Scan className="w-4 h-4" />
-                QR Scanner
+                <span className="hidden sm:inline">QR Scanner</span>
               </a>
               <button 
                 onClick={() => setShowEventModal(true)}
-                className={getButtonClasses('primary')}
+                className={`${getButtonClasses('primary')} flex items-center gap-2`}
               >
                 <Plus className="w-4 h-4" />
-                New Event
+                <span className="hidden sm:inline">New Event</span>
               </button>
+              {selectedEvent && (
+                <>
+                  <button
+                    onClick={() => {
+                      setEditingEvent(selectedEvent)
+                      setShowEditEventModal(true)
+                    }}
+                    className={`${getButtonClasses('outline')} flex items-center gap-2`}
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span className="hidden sm:inline">Edit Event</span>
+                  </button>
+                  <button
+                    onClick={() => deleteEvent(selectedEvent.id)}
+                    className={`${getButtonClasses('danger')} flex items-center gap-2`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Delete Event</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Event Selection */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <label className={componentStyles.label}>
-              Select Event
-            </label>
-            {selectedEvent && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setEditingEvent(selectedEvent)
-                    setShowEditEventModal(true)
-                  }}
-                  className={getButtonClasses('outline')}
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit Event
-                </button>
-                <button
-                  onClick={() => deleteEvent(selectedEvent.id)}
-                  className={getButtonClasses('danger')}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete Event
-                </button>
-              </div>
-            )}
+          {/* Event Selector */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="p-4 border-b border-gray-200">
+              <label className="text-sm font-medium text-gray-700">
+                Select Event to Manage
+              </label>
+            </div>
+            <div className="p-4">
+              {events.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Events Created</h3>
+                  <p className="text-gray-600 mb-4">Create your first event to get started with guest management.</p>
+                  <button
+                    onClick={() => setShowEventModal(true)}
+                    className={`${getButtonClasses('primary')} flex items-center gap-2 mx-auto`}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create First Event
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {events.map((event) => (
+                    <div
+                      key={event.id}
+                      onClick={() => setSelectedEvent(event)}
+                      className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                        selectedEvent?.id === event.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-semibold text-gray-900">{event.name}</h4>
+                            {selectedEvent?.id === event.id && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Selected
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              {new Date(event.date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </div>
+                            {event.location && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-4 h-4" />
+                                {event.location}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <Users className="w-4 h-4" />
+                              {event._count.guests} guests
+                            </div>
+                          </div>
+                          {event.description && (
+                            <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                              {event.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center">
+                            {selectedEvent?.id === event.id && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-
-          <select
-            value={selectedEvent?.id || ''}
-            onChange={(e) => {
-              const event = events.find(ev => ev.id === e.target.value)
-              setSelectedEvent(event || null)
-            }}
-            className={getInputClasses()}
-          >
-            {events.map((event) => (
-              <option key={event.id} value={event.id}>
-                {event.name} - {new Date(event.date).toLocaleDateString()}
-              </option>
-            ))}
-          </select>
         </div>
 
         {selectedEvent && (
           <>
-            {/* Stats Cards */}
+            {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className={componentStyles.card.base}>
+              <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
                 <div className="flex items-center p-6">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <Users className="w-6 h-6 text-blue-600" />
@@ -759,7 +876,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className={componentStyles.card.base}>
+              <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
                 <div className="flex items-center p-6">
                   <div className="p-2 bg-green-100 rounded-lg">
                     <Mail className="w-6 h-6 text-green-600" />
@@ -771,7 +888,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className={componentStyles.card.base}>
+              <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
                 <div className="flex items-center p-6">
                   <div className="p-2 bg-orange-100 rounded-lg">
                     <QrCode className="w-6 h-6 text-orange-600" />
@@ -783,7 +900,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className={componentStyles.card.base}>
+              <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
                 <div className="flex items-center p-6">
                   <div className="p-2 bg-purple-100 rounded-lg">
                     <BarChart3 className="w-6 h-6 text-purple-600" />
@@ -796,134 +913,194 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className={`${componentStyles.card.base} mb-8`}>
-              <div className={componentStyles.card.header}>
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
-                  <div className="flex gap-2">
+            {/* Workflow-Based Action Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* Guest Management Card */}
+              <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+                <div className={componentStyles.card.header}>
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <Users className="w-5 h-5 mr-2" />
+                    Guest Management
+                  </h3>
+                </div>
+                <div className={componentStyles.card.content}>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setShowGuestModal(true)}
+                      className={`${getButtonClasses('success')} w-full justify-start`}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Individual Guest
+                    </button>
                     <button
                       onClick={() => setShowCSVModal(true)}
-                      className={getButtonClasses('warning')}
+                      className={`${getButtonClasses('warning')} w-full justify-start`}
                     >
                       <Upload className="w-4 h-4" />
-                      Bulk Import
+                      Bulk Import (CSV)
                     </button>
                     <button
                       onClick={() => setShowExistingGuestModal(true)}
-                      className={getButtonClasses('outline')}
+                      className={`${getButtonClasses('outline')} w-full justify-start`}
                     >
                       <User className="w-4 h-4" />
-                      Add Existing
-                    </button>
-                    <button
-                      onClick={() => setShowGuestModal(true)}
-                      className={getButtonClasses('success')}
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Guest
+                      Add Existing Guest
                     </button>
                   </div>
                 </div>
               </div>
-              <div className={componentStyles.card.content}>
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">
-                      {selectedGuests.size} of {guests.length} guests selected
-                    </span>
-                    <div className="flex gap-2">
+
+              {/* Communication Card */}
+              <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+                <div className={componentStyles.card.header}>
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <Send className="w-5 h-5 mr-2" />
+                    Communication
+                  </h3>
+                </div>
+                <div className={componentStyles.card.content}>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => sendEmails('save_the_date', Array.from(selectedGuests))}
+                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      className={`${getButtonClasses('primary')} w-full justify-start`}
+                    >
+                      <Send className="w-4 h-4" />
+                      Send Save the Date
+                    </button>
+                    <button
+                      onClick={() => sendEmails('invitation', Array.from(selectedGuests))}
+                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      className={`${getButtonClasses('success')} w-full justify-start`}
+                    >
+                      <Send className="w-4 h-4" />
+                      Send Invitations
+                    </button>
+                    <button
+                      onClick={() => sendPlusOneInvitations(Array.from(selectedGuests))}
+                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      className={`${getButtonClasses('indigo')} w-full justify-start`}
+                    >
+                      <Send className="w-4 h-4" />
+                      Plus-One Invitations
+                    </button>
+                    <button
+                      onClick={testEmail}
+                      className={`${getButtonClasses('purple')} w-full justify-start`}
+                    >
+                      <Send className="w-4 h-4" />
+                      Test Email
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* QR & Check-in Card */}
+              <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+                <div className={componentStyles.card.header}>
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <QrCode className="w-5 h-5 mr-2" />
+                    QR & Check-in
+                  </h3>
+                </div>
+                <div className={componentStyles.card.content}>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => generateQRCodes(Array.from(selectedGuests))}
+                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      className={`${getButtonClasses('teal')} w-full justify-start`}
+                    >
+                      <QrCode className="w-4 h-4" />
+                      Generate QR Codes
+                    </button>
+                    <button
+                      onClick={() => sendEmails('qr_code', Array.from(selectedGuests))}
+                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      className={`${getButtonClasses('warning')} w-full justify-start`}
+                    >
+                      <QrCode className="w-4 h-4" />
+                      Send QR Codes
+                    </button>
+                    <button
+                      onClick={sendQRCodesToConfirmedAttendees}
+                      disabled={sendingEmails}
+                      className={`${getButtonClasses('pink')} w-full justify-start`}
+                    >
+                      <QrCode className="w-4 h-4" />
+                      QR to Confirmed
+                    </button>
+                    <a
+                      href="/scanner"
+                      className={`${getButtonClasses('orange')} w-full justify-start`}
+                    >
+                      <Scan className="w-4 h-4" />
+                      QR Scanner
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+
+            {/* Guest List Table */}
+            <div className={componentStyles.card.base}>
+              <div className={componentStyles.card.header}>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-900">Guest List</h3>
+                  <div className="flex items-center gap-4">
+                    {/* Guest Selection Info */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-gray-600">Total: {guests.length}</span>
+                      <span className="text-gray-400">•</span>
+                      <span className={`font-medium ${selectedGuests.size > 0 ? 'text-blue-600' : 'text-gray-600'}`}>
+                        Selected: {selectedGuests.size}
+                      </span>
+                    </div>
+                    
+                    {/* Selection Controls */}
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={selectAllGuests}
-                        className="text-sm text-blue-600 hover:text-blue-800"
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                       >
                         Select All
                       </button>
                       <button
                         onClick={clearSelection}
-                        className="text-sm text-gray-600 hover:text-gray-800"
+                        className="text-sm text-gray-600 hover:text-gray-800 font-medium"
                       >
                         Clear
                       </button>
                     </div>
+                    
+                    {/* Bulk Actions */}
+                    {selectedGuests.size > 0 && (
+                      <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
+                        <button
+                          onClick={regenerateMissingQRCodes}
+                          disabled={sendingEmails}
+                          className={`${getButtonClasses('orange')} text-xs`}
+                        >
+                          <QrCode className="w-3 h-3" />
+                          Regenerate QR
+                        </button>
+                        <button className={`${getButtonClasses('secondary')} text-xs`}>
+                          <Download className="w-3 h-3" />
+                          Export
+                        </button>
+                        <button
+                          onClick={deleteSelectedGuests}
+                          disabled={sendingEmails}
+                          className={`${getButtonClasses('danger')} text-xs`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-4">
-                  <button
-                    onClick={() => sendEmails('save_the_date', Array.from(selectedGuests))}
-                    disabled={selectedGuests.size === 0 || sendingEmails}
-                    className={getButtonClasses('primary')}
-                  >
-                    <Send className="w-4 h-4" />
-                    {sendingEmails ? 'Sending...' : `Send Save the Date (${selectedGuests.size})`}
-                  </button>
-                  <button
-                    onClick={() => sendEmails('invitation', Array.from(selectedGuests))}
-                    disabled={selectedGuests.size === 0 || sendingEmails}
-                    className={getButtonClasses('success')}
-                  >
-                    <Send className="w-4 h-4" />
-                    {sendingEmails ? 'Sending...' : `Send Invitations (${selectedGuests.size})`}
-                  </button>
-                  <button
-                    onClick={() => sendEmails('qr_code', Array.from(selectedGuests))}
-                    disabled={selectedGuests.size === 0 || sendingEmails}
-                    className={getButtonClasses('warning')}
-                  >
-                    <QrCode className="w-4 h-4" />
-                    {sendingEmails ? 'Sending...' : `Send QR Codes (${selectedGuests.size})`}
-                  </button>
-                  <button
-                    onClick={() => sendPlusOneInvitations(Array.from(selectedGuests))}
-                    disabled={selectedGuests.size === 0 || sendingEmails}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                  >
-                    <Send className="w-4 h-4" />
-                    {sendingEmails ? 'Sending...' : `Send Plus-One Invitations (${selectedGuests.size})`}
-                  </button>
-                  <button
-                    onClick={sendQRCodesToConfirmedAttendees}
-                    disabled={sendingEmails}
-                    className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                  >
-                    <QrCode className="w-4 h-4" />
-                    {sendingEmails ? 'Sending...' : 'Send QR Codes to Confirmed Attendees'}
-                  </button>
-                  <button
-                    onClick={() => generateQRCodes(Array.from(selectedGuests))}
-                    disabled={selectedGuests.size === 0 || sendingEmails}
-                    className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                  >
-                    <QrCode className="w-4 h-4" />
-                    {sendingEmails ? 'Generating...' : `Generate QR Codes (${selectedGuests.size})`}
-                  </button>
-                  <button
-                    onClick={regenerateMissingQRCodes}
-                    disabled={sendingEmails}
-                    className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                  >
-                    <QrCode className="w-4 h-4" />
-                    {sendingEmails ? 'Regenerating...' : 'Regenerate Missing QR Codes'}
-                  </button>
-                  <button className={getButtonClasses('secondary')}>
-                    <Download className="w-4 h-4" />
-                    Export Guest List
-                  </button>
-                  <button
-                    onClick={testEmail}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                  >
-                    <Send className="w-4 h-4" />
-                    Test Email
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Guests Table */}
-            <div className={componentStyles.card.base}>
-              <div className={componentStyles.card.header}>
-                <h3 className="text-lg font-medium text-gray-900 ">Guest List</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -952,9 +1129,9 @@ export default function Dashboard() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Invitation Sent
                       </th>
-                                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                           Plus-One
-                         </th>
+                                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Plus-One
+                      </th>
                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                            QR Status
                          </th>
@@ -1008,11 +1185,6 @@ export default function Dashboard() {
                                guest.invitations[0]?.response === 'NOT_COMING' ? 'Not Coming' :
                                'No Response'}
                             </span>
-                                                 {guest.invitations[0]?.plusOneEmail && (
-                       <div className="text-xs text-gray-500">
-                         +1: {guest.invitations[0].plusOneEmail}
-                       </div>
-                     )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -1024,37 +1196,48 @@ export default function Dashboard() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            guest.invitations[0]?.status === 'SENT' 
+                            guest.invitations[0]?.status === 'SENT' || guest.invitations[0]?.status === 'RESPONDED'
                               ? 'bg-green-100 text-green-800'
                               : guest.invitations[0]?.status === 'PENDING'
                               ? 'bg-yellow-100 text-yellow-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}>
                             {guest.invitations[0]?.status === 'SENT' ? 'Sent' :
+                             guest.invitations[0]?.status === 'RESPONDED' ? 'Responded' :
                              guest.invitations[0]?.status === 'PENDING' ? 'Pending' :
                              'Not Sent'}
                           </span>
                         </td>
                                                    <td className="px-6 py-4 whitespace-nowrap">
-                             <button
-                               onClick={() => togglePlusOne(guest.id, guest.invitations[0]?.hasPlusOne || false)}
-                               disabled={updatingPlusOne}
-                               className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
-                                 guest.invitations[0]?.hasPlusOne 
-                                   ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                   : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                               }`}
-                             >
-                                                                {guest.invitations[0]?.hasPlusOne ? 'Enabled' : 'Disabled'}
-                               </button>
+                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                 guest.isPlusOne 
+                                   ? 'bg-purple-100 text-purple-800' 
+                                   : guest.invitations[0]?.hasPlusOne 
+                                   ? 'bg-green-100 text-green-800' 
+                                   : 'bg-gray-100 text-gray-800'
+                               }`}>
+                                 {guest.isPlusOne ? 'Plus-One Guest' :
+                                  guest.invitations[0]?.hasPlusOne ? 'Has Plus-One' :
+                                  'No Plus-One'}
+                               </span>
                              </td>
                              <td className="px-6 py-4 whitespace-nowrap">
                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                                  guest.qrCodes && guest.qrCodes.length > 0
-                                   ? 'bg-green-100 text-green-800'
+                                   ? guest.qrCodes[0].status === 'USED'
+                                     ? 'bg-red-100 text-red-800'
+                                     : guest.qrCodes[0].status === 'CREATED'
+                                     ? 'bg-green-100 text-green-800'
+                                     : 'bg-yellow-100 text-yellow-800'
                                    : 'bg-gray-100 text-gray-800'
                                }`}>
-                                 {guest.qrCodes && guest.qrCodes.length > 0 ? 'Active' : 'Inactive'}
+                                 {guest.qrCodes && guest.qrCodes.length > 0 
+                                   ? guest.qrCodes[0].status === 'USED' 
+                                     ? 'Used' 
+                                     : guest.qrCodes[0].status === 'CREATED'
+                                     ? 'Active'
+                                     : guest.qrCodes[0].status
+                                   : 'Inactive'}
                                </span>
                              </td>
                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

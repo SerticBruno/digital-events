@@ -409,23 +409,23 @@ export async function sendQRCode(guestId: string, eventId?: string) {
   // Get QR codes using raw SQL
   let qrCodes: Array<{
     code: string;
-    isUsed: boolean;
+    status: string;
   }> = []
 
   if (eventId) {
     qrCodes = await prisma.$queryRaw`
-      SELECT code, "isUsed"
+      SELECT code, status
       FROM qr_codes
       WHERE "guestId" = ${guestId}
       AND "eventId" = ${eventId}
-      AND "isUsed" = false
+      AND status = 'CREATED'
     `
   } else {
     qrCodes = await prisma.$queryRaw`
-      SELECT code, "isUsed"
+      SELECT code, status
       FROM qr_codes
       WHERE "guestId" = ${guestId}
-      AND "isUsed" = false
+      AND status = 'CREATED'
     `
   }
 
@@ -437,18 +437,18 @@ export async function sendQRCode(guestId: string, eventId?: string) {
     // Fetch the newly created QR code
     if (eventId) {
       qrCodes = await prisma.$queryRaw`
-        SELECT code, "isUsed"
+        SELECT code, status
         FROM qr_codes
         WHERE "guestId" = ${guestId}
         AND "eventId" = ${eventId}
-        AND "isUsed" = false
+        AND status = 'CREATED'
       `
     } else {
       qrCodes = await prisma.$queryRaw`
-        SELECT code, "isUsed"
+        SELECT code, status
         FROM qr_codes
         WHERE "guestId" = ${guestId}
-        AND "isUsed" = false
+        AND status = 'CREATED'
       `
     }
     
@@ -670,23 +670,23 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
   // Get QR code for the plus-one guest
   let qrCodes: Array<{
     code: string;
-    isUsed: boolean;
+    status: string;
   }> = []
 
   if (eventId) {
     qrCodes = await prisma.$queryRaw`
-      SELECT code, "isUsed"
+      SELECT code, status
       FROM qr_codes
       WHERE "guestId" = ${plusOneGuestId}
       AND "eventId" = ${eventId}
-      AND "isUsed" = false
+      AND status = 'CREATED'
     `
   } else {
     qrCodes = await prisma.$queryRaw`
-      SELECT code, "isUsed"
+      SELECT code, status
       FROM qr_codes
       WHERE "guestId" = ${plusOneGuestId}
-      AND "isUsed" = false
+      AND status = 'CREATED'
     `
   }
 
@@ -698,18 +698,18 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
     // Fetch the newly created QR code
     if (eventId) {
       qrCodes = await prisma.$queryRaw`
-        SELECT code, "isUsed"
+        SELECT code, status
         FROM qr_codes
         WHERE "guestId" = ${plusOneGuestId}
         AND "eventId" = ${eventId}
-        AND "isUsed" = false
+        AND status = 'CREATED'
       `
     } else {
       qrCodes = await prisma.$queryRaw`
-        SELECT code, "isUsed"
+        SELECT code, status
         FROM qr_codes
         WHERE "guestId" = ${plusOneGuestId}
-        AND "isUsed" = false
+        AND status = 'CREATED'
       `
     }
     

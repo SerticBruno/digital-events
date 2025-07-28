@@ -4,74 +4,92 @@ import { prisma } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { qrCode } = body
+    const { code, eventId } = body
 
-    if (!qrCode) {
+    if (!code || !eventId) {
       return NextResponse.json(
-        { error: 'QR code is required' },
+        { error: 'QR code and event ID are required' },
         { status: 400 }
       )
     }
 
-    // Find the QR code
-    const qrCodeRecord = await prisma.qRCode.findFirst({
-      where: { code: qrCode },
-      include: {
-        guest: true,
-        event: true
-      }
-    })
+    // Find QR code and check if it's valid and unused
+    const qrCodeRecord = await prisma.$queryRaw<Array<{
+      id: string
+      code: string
+      type: string
+      status: string
+      guestId: string
+      eventId: string
+    }>>`
+      SELECT id, code, type, status, "guestId", "eventId"
+      FROM qr_codes 
+      WHERE code = ${code} 
+      AND "eventId" = ${eventId}
+      AND status = 'CREATED'
+    `
 
-    if (!qrCodeRecord) {
+    if (qrCodeRecord.length === 0) {
       return NextResponse.json(
-        { error: 'Invalid QR code' },
+        { error: 'Invalid or already used QR code' },
         { status: 404 }
       )
     }
 
-    // Check if QR code is already used
-    if (qrCodeRecord.isUsed) {
+    const qrCode = qrCodeRecord[0]
+
+    // Mark QR code as used
+    await prisma.$executeRaw`
+      UPDATE qr_codes 
+      SET status = 'USED', "usedAt" = datetime('now')
+      WHERE id = ${qrCode.id}
+    `
+
+    // Get guest information
+    const guestRecord = await prisma.$queryRaw<Array<{
+      id: string
+      firstName: string
+      lastName: string
+      email: string
+      company: string | null
+      isVip: boolean
+    }>>`
+      SELECT id, "firstName", "lastName", email, company, "isVip"
+      FROM guests 
+      WHERE id = ${qrCode.guestId}
+    `
+
+    if (guestRecord.length === 0) {
       return NextResponse.json(
-        { 
-          error: 'QR code already used',
-          usedAt: qrCodeRecord.usedAt,
-          guest: qrCodeRecord.guest
-        },
-        { status: 409 }
+        { error: 'Guest not found' },
+        { status: 404 }
       )
     }
 
-    // Mark QR code as used
-    await prisma.qRCode.update({
-      where: { id: qrCodeRecord.id },
-      data: {
-        isUsed: true,
-        usedAt: new Date()
-      }
-    })
+    const guest = guestRecord[0]
 
     return NextResponse.json({
-      message: 'QR code validated successfully',
+      success: true,
       guest: {
-        id: qrCodeRecord.guest.id,
-        firstName: qrCodeRecord.guest.firstName,
-        lastName: qrCodeRecord.guest.lastName,
-        email: qrCodeRecord.guest.email,
-        isVip: qrCodeRecord.guest.isVip
+        id: guest.id,
+        firstName: guest.firstName,
+        lastName: guest.lastName,
+        email: guest.email,
+        company: guest.company,
+        isVip: guest.isVip
       },
-      event: {
-        id: qrCodeRecord.event.id,
-        name: qrCodeRecord.event.name,
-        date: qrCodeRecord.event.date,
-        location: qrCodeRecord.event.location
-      },
-      usedAt: new Date()
+      qrCode: {
+        id: qrCode.id,
+        code: qrCode.code,
+        type: qrCode.type,
+        status: 'USED',
+        usedAt: new Date().toISOString()
+      }
     })
-
   } catch (error) {
-    console.error('Failed to validate QR code:', error)
+    console.error('Error validating QR code:', error)
     return NextResponse.json(
-      { error: 'Failed to validate QR code' },
+      { error: 'Error validating QR code' },
       { status: 500 }
     )
   }

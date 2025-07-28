@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
             qrCodes: {
               where: { 
                 eventId,
-                isUsed: false
+                status: 'CREATED'
               },
               orderBy: { createdAt: 'desc' },
               take: 1
@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
       position: eventGuest.guest.position,
       phone: eventGuest.guest.phone,
       isVip: eventGuest.guest.isVip,
+      isPlusOne: eventGuest.guest.isPlusOne,
       invitations: eventGuest.guest.invitations,
       qrCodes: eventGuest.guest.qrCodes,
       survey: undefined

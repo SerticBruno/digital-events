@@ -38,6 +38,7 @@ model Guest {
   position  String?
   phone     String?
   isVip     Boolean  @default(false)
+  isPlusOne Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -91,7 +92,7 @@ model QRCode {
   id        String   @id @default(cuid())
   code      String   @unique
   type      String   // REGULAR, VIP
-  isUsed    Boolean  @default(false)
+  status    String   @default("CREATED") // CREATED, ACTIVE, USED, EXPIRED
   usedAt    DateTime?
   createdAt DateTime @default(now())
 

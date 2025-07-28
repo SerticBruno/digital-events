@@ -147,6 +147,7 @@ export const componentStyles = {
       transition-all duration-200
       focus:outline-none focus:ring-2 focus:ring-offset-2
       disabled:opacity-50 disabled:cursor-not-allowed
+      cursor-pointer
     `,
     primary: `
       bg-blue-600 text-white
@@ -178,6 +179,32 @@ export const componentStyles = {
       border border-gray-300 bg-white text-gray-900
       hover:bg-gray-50
       focus:ring-blue-500
+    `,
+    // Additional button variants for quick actions
+    indigo: `
+      bg-indigo-600 text-white
+      hover:bg-indigo-700
+      focus:ring-indigo-500
+    `,
+    pink: `
+      bg-pink-600 text-white
+      hover:bg-pink-700
+      focus:ring-pink-500
+    `,
+    teal: `
+      bg-teal-600 text-white
+      hover:bg-teal-700
+      focus:ring-teal-500
+    `,
+    purple: `
+      bg-purple-600 text-white
+      hover:bg-purple-700
+      focus:ring-purple-500
+    `,
+    orange: `
+      bg-orange-600 text-white
+      hover:bg-orange-700
+      focus:ring-orange-500
     `,
   },
   

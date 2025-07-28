@@ -70,4 +70,106 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const guestId = searchParams.get('guestId')
+
+    if (!guestId) {
+      return NextResponse.json(
+        { error: 'Guest ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Check if guest exists and get their invitations to find plus-ones
+    const guest = await prisma.guest.findUnique({
+      where: { id: guestId },
+      include: {
+        eventGuests: {
+          include: {
+            event: true
+          }
+        },
+        invitations: {
+          where: {
+            hasPlusOne: true
+          },
+          select: {
+            plusOneEmail: true
+          }
+        }
+      }
+    })
+
+    if (!guest) {
+      return NextResponse.json(
+        { error: 'Guest not found' },
+        { status: 404 }
+      )
+    }
+
+    // Find plus-one guests to delete
+    const plusOneEmails = guest.invitations
+      .map(inv => inv.plusOneEmail)
+      .filter(email => email) as string[]
+
+    let deletedPlusOnes: Array<{ email: string; firstName: string; lastName: string }> = []
+    
+    if (plusOneEmails.length > 0) {
+      // Find plus-one guests by their emails
+      const plusOneGuests = await prisma.guest.findMany({
+        where: {
+          email: {
+            in: plusOneEmails
+          }
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true
+        }
+      })
+
+      // Delete plus-one guests first
+      for (const plusOneGuest of plusOneGuests) {
+        await prisma.guest.delete({
+          where: { id: plusOneGuest.id }
+        })
+        deletedPlusOnes.push({
+          email: plusOneGuest.email,
+          firstName: plusOneGuest.firstName,
+          lastName: plusOneGuest.lastName
+        })
+      }
+    }
+
+    // Get list of events this guest is associated with for the response
+    const associatedEvents = guest.eventGuests.map(eg => eg.event.name)
+
+    // Delete the main guest (this will cascade delete all related records)
+    await prisma.guest.delete({
+      where: { id: guestId }
+    })
+
+    return NextResponse.json({ 
+      message: 'Guest deleted successfully',
+      deletedGuest: {
+        id: guest.id,
+        firstName: guest.firstName,
+        lastName: guest.lastName,
+        email: guest.email
+      },
+      associatedEvents
+    })
+  } catch (error) {
+    console.error('Failed to delete guest:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete guest' },
+      { status: 500 }
+    )
+  }
 } 

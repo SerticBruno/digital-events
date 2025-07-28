@@ -53,18 +53,20 @@ export async function POST(request: NextRequest) {
     })
 
     if (invitation) {
-      // Update existing invitation
+      // Update existing invitation - preserve the sentAt timestamp if it exists
       invitation = await prisma.invitation.update({
         where: { id: invitation.id },
         data: {
           response,
           respondedAt: new Date(),
           plusOneName: response === 'COMING_WITH_PLUS_ONE' ? plusOneEmail : null,
-          status: 'RESPONDED'
+          plusOneEmail: response === 'COMING_WITH_PLUS_ONE' ? plusOneEmail : null,
+          status: 'RESPONDED',
+          hasPlusOne: response === 'COMING_WITH_PLUS_ONE'
         }
       })
     } else {
-      // Create new invitation
+      // Create new invitation if none exists (this shouldn't happen normally)
       invitation = await prisma.invitation.create({
         data: {
           guestId,
@@ -74,6 +76,7 @@ export async function POST(request: NextRequest) {
           response,
           respondedAt: new Date(),
           plusOneName: response === 'COMING_WITH_PLUS_ONE' ? plusOneEmail : null,
+          plusOneEmail: response === 'COMING_WITH_PLUS_ONE' ? plusOneEmail : null,
           hasPlusOne: response === 'COMING_WITH_PLUS_ONE'
         }
       })
@@ -85,12 +88,15 @@ export async function POST(request: NextRequest) {
         // Create new guest for plus-one
         const plusOneGuest = await prisma.guest.upsert({
           where: { email: plusOneEmail },
-          update: {},
+          update: {
+            isPlusOne: true
+          },
           create: {
             email: plusOneEmail,
             firstName: 'Guest',
             lastName: 'of ' + (await prisma.guest.findUnique({ where: { id: guestId } }))?.firstName || 'Guest',
-            isVip: false
+            isVip: false,
+            isPlusOne: true
           }
         })
 

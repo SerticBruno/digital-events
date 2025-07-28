@@ -108,13 +108,14 @@ export async function POST(request: NextRequest) {
               })
 
               if (existingInvitation) {
-                // Update existing invitation
+                // Update existing invitation - preserve hasPlusOne status
                 await prisma.invitation.update({
                   where: { id: existingInvitation.id },
                   data: {
                     type: type.toUpperCase().replace('_', '') as string,
                     status: 'SENT',
                     sentAt: new Date()
+                    // Note: hasPlusOne is not updated here to preserve existing value
                   }
                 })
               } else {
