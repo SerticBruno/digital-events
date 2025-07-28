@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Plus, Upload, Search, User, Mail, Building, Crown, X } from 'lucide-react'
+import { Users, Plus, Upload, Search, User, Mail, Building, Crown, X, Trash2 } from 'lucide-react'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
+import DataTable, { columnRenderers } from '@/components/DataTable'
 import { getButtonClasses, componentStyles } from '@/lib/design-system'
 
 interface Guest {
@@ -31,6 +32,81 @@ export default function GuestsPage() {
   const [showCSVModal, setShowCSVModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredGuests, setFilteredGuests] = useState<Guest[]>([])
+
+  // Table columns configuration
+  const guestColumns = [
+    {
+      key: 'guest',
+      label: 'Guest',
+      sortable: true,
+      render: columnRenderers.guest
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      sortable: true,
+      render: (value: any, row: any) => (
+        <div>
+          <div className="text-sm text-gray-900">{row.email}</div>
+          {row.phone && (
+            <div className="text-sm text-gray-500">{row.phone}</div>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'company',
+      label: 'Company',
+      sortable: true,
+      render: columnRenderers.company
+    },
+    {
+      key: 'isVip',
+      label: 'Status',
+      sortable: true,
+      render: columnRenderers.vip
+    },
+    {
+      key: 'plusOne',
+      label: 'Plus-One',
+      sortable: true,
+      render: columnRenderers.plusOne
+    },
+    {
+      key: 'events',
+      label: 'Events',
+      sortable: false,
+      render: (value: any, row: any) => (
+        <div>
+          {row.eventGuests && row.eventGuests.length > 0 ? (
+            <div>
+              {row.eventGuests.map((eg: any) => (
+                <span key={eg.event.id} className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs mr-1 mb-1">
+                  {eg.event.name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="text-gray-400">No events</span>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      width: 'w-32',
+      render: (value: any, row: any) => (
+        <button
+          onClick={() => deleteGuest(row.id, `${row.firstName} ${row.lastName}`)}
+          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+          title="Delete"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )
+    }
+  ]
 
   useEffect(() => {
     fetchGuests()
@@ -270,126 +346,15 @@ export default function GuestsPage() {
             </div>
           </div>
           
-          {loading ? (
-            <div className="p-6 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-sm text-gray-600">Loading guests...</p>
-            </div>
-          ) : filteredGuests.length === 0 ? (
-            <div className="p-12 text-center">
-              <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No guests found</h3>
-              <p className="text-gray-600 mb-4">
-                {searchTerm ? 'Try adjusting your search terms.' : 'Get started by adding your first guest.'}
-              </p>
-              <button
-                onClick={() => setShowGuestModal(true)}
-                className={getButtonClasses('primary')}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add First Guest
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Guest
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contact
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Company
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Plus-One
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Events
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredGuests.map((guest) => (
-                    <tr key={guest.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <span className="text-sm font-medium text-gray-700">
-                                {guest.firstName.charAt(0)}{guest.lastName.charAt(0)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {guest.firstName} {guest.lastName}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {guest.position || 'No position'}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{guest.email}</div>
-                        {guest.phone && (
-                          <div className="text-sm text-gray-500">{guest.phone}</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{guest.company || 'No company'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          guest.isVip ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {guest.isVip ? 'VIP' : 'Regular'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          guest.isPlusOne ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {guest.isPlusOne ? 'Plus-One Guest' : 'Regular Guest'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {guest.eventGuests && guest.eventGuests.length > 0 ? (
-                          <div>
-                            {guest.eventGuests.map((eg) => (
-                              <span key={eg.event.id} className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs mr-1 mb-1">
-                                {eg.event.name}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">No events</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => deleteGuest(guest.id, `${guest.firstName} ${guest.lastName}`)}
-                          className="text-red-600 hover:text-red-900 font-medium"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            data={filteredGuests}
+            columns={guestColumns}
+            searchable={false}
+            pagination={true}
+            itemsPerPage={15}
+            loading={loading}
+            emptyMessage={searchTerm ? 'No guests found matching your search' : 'No guests found. Get started by adding your first guest.'}
+          />
         </div>
       </div>
 

@@ -29,6 +29,8 @@ export default function CSVUpload({ onUpload }: CSVUploadProps) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
+    console.log('File selected:', selectedFile) // Debug log
+    
     if (!selectedFile) return
 
     if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
@@ -43,36 +45,81 @@ export default function CSVUpload({ onUpload }: CSVUploadProps) {
   }
 
   const parseCSV = (file: File) => {
+    console.log('Starting to parse CSV file:', file.name)
+    
     const reader = new FileReader()
+    
     reader.onload = (e) => {
-      const text = e.target?.result as string
-      const lines = text.split('\n')
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
-      
-      const data: CSVRow[] = []
-      for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim()) {
-          const values = lines[i].split(',').map(v => v.trim())
-          const row: Partial<CSVRow> = {}
-          
-          headers.forEach((header, index) => {
-            if (values[index]) {
-              if (header === 'isvip') {
-                row.isVip = values[index].toLowerCase() === 'true' || values[index] === '1'
-              } else if (header in row) {
-                (row as Record<string, string>)[header] = values[index]
+      try {
+        const text = e.target?.result as string
+        console.log('Raw CSV text (first 200 chars):', text.substring(0, 200))
+        
+        const lines = text.split('\n')
+        console.log('Number of lines:', lines.length)
+        
+        if (lines.length < 2) {
+          setError('CSV file must have at least a header row and one data row')
+          return
+        }
+        
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+        console.log('CSV Headers:', headers)
+        
+        const data: CSVRow[] = []
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i].trim()) {
+            const values = lines[i].split(',').map(v => v.trim())
+            const row: Partial<CSVRow> = {}
+            
+            console.log(`Row ${i} values:`, values)
+            
+            headers.forEach((header, index) => {
+              if (values[index]) {
+                if (header === 'isvip') {
+                  row.isVip = values[index].toLowerCase() === 'true' || values[index] === '1'
+                } else if (header === 'firstname') {
+                  row.firstName = values[index]
+                } else if (header === 'lastname') {
+                  row.lastName = values[index]
+                } else if (header === 'email') {
+                  row.email = values[index]
+                } else if (header === 'company') {
+                  row.company = values[index]
+                } else if (header === 'position') {
+                  row.position = values[index]
+                } else if (header === 'phone') {
+                  row.phone = values[index]
+                }
               }
+            })
+            
+            console.log(`Processed row ${i}:`, row)
+            
+            if (row.firstName && row.lastName && row.email) {
+              data.push(row as CSVRow)
+            } else {
+              console.log(`Row ${i} missing required fields:`, { firstName: row.firstName, lastName: row.lastName, email: row.email })
             }
-          })
-          
-          if (row.firstName && row.lastName && row.email) {
-            data.push(row as CSVRow)
           }
         }
+        
+        console.log('Final parsed data:', data)
+        setPreview(data.slice(0, 5))
+        
+        if (data.length === 0) {
+          setError('No valid guest data found in CSV file')
+        }
+      } catch (error) {
+        console.error('Error parsing CSV:', error)
+        setError('Error parsing CSV file: ' + (error as Error).message)
       }
-      
-      setPreview(data.slice(0, 5)) // Show first 5 rows as preview
     }
+    
+    reader.onerror = () => {
+      console.error('Error reading file')
+      setError('Error reading CSV file')
+    }
+    
     reader.readAsText(file)
   }
 
@@ -93,15 +140,25 @@ export default function CSVUpload({ onUpload }: CSVUploadProps) {
         const guests: CSVRow[] = []
         for (let i = 1; i < lines.length; i++) {
           if (lines[i].trim()) {
-                      const values = lines[i].split(',').map(v => v.trim())
+            const values = lines[i].split(',').map(v => v.trim())
             const row: Partial<CSVRow> = {}
             
             headers.forEach((header, index) => {
               if (values[index]) {
                 if (header === 'isvip') {
                   row.isVip = values[index].toLowerCase() === 'true' || values[index] === '1'
-                } else if (header in row) {
-                  (row as Record<string, string>)[header] = values[index]
+                } else if (header === 'firstname') {
+                  row.firstName = values[index]
+                } else if (header === 'lastname') {
+                  row.lastName = values[index]
+                } else if (header === 'email') {
+                  row.email = values[index]
+                } else if (header === 'company') {
+                  row.company = values[index]
+                } else if (header === 'position') {
+                  row.position = values[index]
+                } else if (header === 'phone') {
+                  row.phone = values[index]
                 }
               }
             })
@@ -112,13 +169,15 @@ export default function CSVUpload({ onUpload }: CSVUploadProps) {
           }
         }
 
+        console.log('Uploading guests:', guests) // Debug log
         await onUpload(guests)
         setSuccess(`Successfully uploaded ${guests.length} guests`)
         setFile(null)
         setPreview([])
       }
       reader.readAsText(file)
-    } catch {
+    } catch (error) {
+      console.error('Upload error:', error) // Debug log
       setError('Failed to upload CSV file')
     } finally {
       setIsUploading(false)
@@ -147,13 +206,37 @@ Jane,Smith,jane.smith@example.com,Another Corp,Director,+1234567891,true`
           Upload a CSV file to add multiple guests at once. Download the template below for the correct format.
         </p>
         
-        <button
-          onClick={downloadTemplate}
-          className={getButtonClasses('secondary')}
-        >
-          <Download className="w-4 h-4" />
-          Download Template
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={downloadTemplate}
+            className={getButtonClasses('secondary')}
+          >
+            <Download className="w-4 h-4" />
+            Download Template
+          </button>
+          
+          <button
+            onClick={() => {
+              console.log('Test button clicked')
+              const testData = [
+                {
+                  firstName: 'Test',
+                  lastName: 'User',
+                  email: 'test@example.com',
+                  company: 'Test Corp',
+                  position: 'Tester',
+                  phone: '+1-555-0000',
+                  isVip: false
+                }
+              ]
+              console.log('Test data:', testData)
+              onUpload(testData)
+            }}
+            className={getButtonClasses('secondary')}
+          >
+            Test Upload
+          </button>
+        </div>
       </div>
 
       <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
@@ -171,10 +254,15 @@ Jane,Smith,jane.smith@example.com,Another Corp,Director,+1234567891,true`
             <input
               id="csv-upload"
               type="file"
-              accept=".csv"
+              accept=".csv,text/csv"
               onChange={handleFileChange}
               className="sr-only"
             />
+          </div>
+          <div className="mt-2">
+            <p className="text-xs text-gray-500">
+              Selected file: {file ? file.name : 'None'}
+            </p>
           </div>
         </div>
       </div>
@@ -228,7 +316,10 @@ Jane,Smith,jane.smith@example.com,Another Corp,Director,+1234567891,true`
       {file && (
         <div className="flex justify-end">
           <button
-            onClick={handleUpload}
+            onClick={() => {
+              console.log('Upload button clicked, file:', file) // Debug log
+              handleUpload()
+            }}
             disabled={isUploading}
             className={getButtonClasses('primary')}
           >

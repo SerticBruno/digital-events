@@ -1,0 +1,21 @@
+firstname,lastname,email,company,position,phone,isvip
+John,Smith,john.smith@example.com,TechCorp Inc,Software Engineer,+1-555-0123,false
+Sarah,Johnson,sarah.johnson@example.com,Design Studio,Creative Director,+1-555-0124,true
+Michael,Brown,michael.brown@example.com,Marketing Pro,Marketing Manager,+1-555-0125,false
+Emily,Davis,emily.davis@example.com,Finance Corp,Financial Analyst,+1-555-0126,true
+David,Wilson,david.wilson@example.com,Consulting Group,Senior Consultant,+1-555-0127,false
+Lisa,Anderson,lisa.anderson@example.com,Healthcare Inc,Nurse Practitioner,+1-555-0128,true
+Robert,Taylor,robert.taylor@example.com,Education First,Principal,+1-555-0129,false
+Jennifer,Thomas,jennifer.thomas@example.com,Retail Plus,Store Manager,+1-555-0130,true
+Christopher,Lee,christopher.lee@example.com,Legal Services,Attorney,+1-555-0131,false
+Amanda,White,amanda.white@example.com,Real Estate Co,Real Estate Agent,+1-555-0132,true
+James,Harris,james.harris@example.com,Construction Ltd,Project Manager,+1-555-0133,false
+Michelle,Clark,michelle.clark@example.com,Media Group,Journalist,+1-555-0134,true
+Daniel,Lewis,daniel.lewis@example.com,Manufacturing Inc,Production Supervisor,+1-555-0135,false
+Jessica,Robinson,jessica.robinson@example.com,Non-Profit Org,Program Director,+1-555-0136,true
+Kevin,Walker,kevin.walker@example.com,Transportation Co,Logistics Manager,+1-555-0137,false
+Nicole,Young,nicole.young@example.com,Entertainment Corp,Event Coordinator,+1-555-0138,true
+Steven,King,steven.king@example.com,Research Institute,Scientist,+1-555-0139,false
+Rachel,Green,rachel.green@example.com,Environmental Co,Environmental Specialist,+1-555-0140,true
+Andrew,Baker,andrew.baker@example.com,Food Services,Chef,+1-555-0141,false
+Melissa,Adams,melissa.adams@example.com,Human Resources,HR Manager,+1-555-0142,true

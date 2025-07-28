@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User, RefreshCw, Edit, Trash2, Calendar, MapPin } from 'lucide-react'
+import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User, RefreshCw, Edit, Trash2, Calendar, MapPin, Eye } from 'lucide-react'
 import EventForm from '@/components/EventForm'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
 import AddExistingGuest from '@/components/AddExistingGuest'
+import DataTable, { columnRenderers } from '@/components/DataTable'
 import { getButtonClasses, getInputClasses, componentStyles } from '@/lib/design-system'
 
 interface Event {
@@ -63,6 +64,87 @@ export default function Dashboard() {
   const [showEditGuestModal, setShowEditGuestModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
+
+  // Table columns configuration
+  const guestColumns = [
+    {
+      key: 'guest',
+      label: 'Guest',
+      sortable: true,
+      render: columnRenderers.guest
+    },
+    {
+      key: 'company',
+      label: 'Company',
+      sortable: true,
+      render: columnRenderers.company
+    },
+    {
+      key: 'response',
+      label: 'Status',
+      sortable: true,
+      render: (value: any, row: any) => columnRenderers.status(row.invitations?.[0]?.response)
+    },
+    {
+      key: 'isVip',
+      label: 'Type',
+      sortable: true,
+      render: columnRenderers.vip
+    },
+    {
+      key: 'invitationStatus',
+      label: 'Invitation Sent',
+      sortable: true,
+      render: (value: any, row: any) => columnRenderers.status(row.invitations?.[0]?.status)
+    },
+    {
+      key: 'plusOne',
+      label: 'Plus-One',
+      sortable: true,
+      render: columnRenderers.plusOne
+    },
+    {
+      key: 'qrStatus',
+      label: 'QR Status',
+      sortable: true,
+      render: columnRenderers.qrStatus
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      width: 'w-48',
+      render: (value: any, row: any) => (
+        <div className="flex items-center space-x-2">
+          <a
+            href={`/respond/${row.id}?eventId=${selectedEvent?.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+            title="View Response"
+          >
+            <Eye className="w-4 h-4" />
+          </a>
+          <button 
+            onClick={() => {
+              setEditingGuest(row)
+              setShowEditGuestModal(true)
+            }}
+            className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+            title="Edit"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => deleteGuest(row.id)}
+            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+            title="Remove"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )
+    }
+  ]
 
   useEffect(() => {
     fetchEvents()
@@ -1120,175 +1202,17 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <input
-                          type="checkbox"
-                          checked={selectedGuests.size === guests.length && guests.length > 0}
-                          onChange={() => selectedGuests.size === guests.length ? clearSelection() : selectAllGuests()}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Guest
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Company
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Invitation Sent
-                      </th>
-                                                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Plus-One
-                      </th>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                           QR Status
-                         </th>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                           Actions
-                         </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {guests.length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="px-6 py-4 text-center text-gray-500">
-                          No guests found for this event. Add some guests to get started.
-                        </td>
-                      </tr>
-                    ) : (
-                      guests.map((guest) => (
-                      <tr key={guest.id} className={selectedGuests.has(guest.id) ? 'bg-blue-50' : ''}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={selectedGuests.has(guest.id)}
-                            onChange={() => toggleGuestSelection(guest.id)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {guest.firstName} {guest.lastName}
-                            </div>
-                            <div className="text-sm text-gray-500">{guest.email}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {guest.company || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="space-y-1">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              guest.invitations[0]?.response === 'COMING' 
-                                ? 'bg-green-100 text-green-800'
-                                : guest.invitations[0]?.response === 'COMING_WITH_PLUS_ONE'
-                                ? 'bg-blue-100 text-blue-800'
-                                : guest.invitations[0]?.response === 'NOT_COMING'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {guest.invitations[0]?.response === 'COMING' ? 'Coming' :
-                               guest.invitations[0]?.response === 'COMING_WITH_PLUS_ONE' ? 'Coming +1' :
-                               guest.invitations[0]?.response === 'NOT_COMING' ? 'Not Coming' :
-                               'No Response'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            guest.isVip ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {guest.isVip ? 'VIP' : 'Regular'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            guest.invitations[0]?.status === 'SENT' || guest.invitations[0]?.status === 'RESPONDED'
-                              ? 'bg-green-100 text-green-800'
-                              : guest.invitations[0]?.status === 'PENDING'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {guest.invitations[0]?.status === 'SENT' ? 'Sent' :
-                             guest.invitations[0]?.status === 'RESPONDED' ? 'Responded' :
-                             guest.invitations[0]?.status === 'PENDING' ? 'Pending' :
-                             'Not Sent'}
-                          </span>
-                        </td>
-                                                   <td className="px-6 py-4 whitespace-nowrap">
-                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                 guest.isPlusOne 
-                                   ? 'bg-purple-100 text-purple-800' 
-                                   : guest.invitations[0]?.hasPlusOne 
-                                   ? 'bg-green-100 text-green-800' 
-                                   : 'bg-gray-100 text-gray-800'
-                               }`}>
-                                 {guest.isPlusOne ? 'Plus-One Guest' :
-                                  guest.invitations[0]?.hasPlusOne ? 'Has Plus-One' :
-                                  'No Plus-One'}
-                               </span>
-                             </td>
-                             <td className="px-6 py-4 whitespace-nowrap">
-                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                 guest.qrCodes && guest.qrCodes.length > 0
-                                   ? guest.qrCodes[0].status === 'USED'
-                                     ? 'bg-red-100 text-red-800'
-                                     : guest.qrCodes[0].status === 'CREATED'
-                                     ? 'bg-green-100 text-green-800'
-                                     : 'bg-yellow-100 text-yellow-800'
-                                   : 'bg-gray-100 text-gray-800'
-                               }`}>
-                                 {guest.qrCodes && guest.qrCodes.length > 0 
-                                   ? guest.qrCodes[0].status === 'USED' 
-                                     ? 'Used' 
-                                     : guest.qrCodes[0].status === 'CREATED'
-                                     ? 'Active'
-                                     : guest.qrCodes[0].status
-                                   : 'Inactive'}
-                               </span>
-                             </td>
-                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <a
-                            href={`/respond/${guest.id}?eventId=${selectedEvent?.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-green-600 hover:text-green-900 mr-3"
-                          >
-                            View Response
-                          </a>
-                          <button 
-                            onClick={() => {
-                              setEditingGuest(guest)
-                              setShowEditGuestModal(true)
-                            }}
-                            className="text-blue-600 hover:text-blue-900 mr-3"
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            onClick={() => deleteGuest(guest.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                data={guests}
+                columns={guestColumns}
+                onRowSelect={setSelectedGuests}
+                selectable={true}
+                searchable={true}
+                pagination={true}
+                itemsPerPage={15}
+                loading={loading}
+                emptyMessage="No guests found for this event. Add some guests to get started."
+              />
             </div>
           </>
         )}
