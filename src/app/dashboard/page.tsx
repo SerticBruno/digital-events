@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan } from 'lucide-react'
+import { Calendar, Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User } from 'lucide-react'
 import EventForm from '@/components/EventForm'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
+import AddExistingGuest from '@/components/AddExistingGuest'
 import { getButtonClasses, getInputClasses, componentStyles } from '@/lib/design-system'
 
 interface Event {
@@ -42,6 +43,7 @@ export default function Dashboard() {
   const [showEventModal, setShowEventModal] = useState(false)
   const [showGuestModal, setShowGuestModal] = useState(false)
   const [showCSVModal, setShowCSVModal] = useState(false)
+  const [showExistingGuestModal, setShowExistingGuestModal] = useState(false)
 
   useEffect(() => {
     fetchEvents()
@@ -57,12 +59,17 @@ export default function Dashboard() {
     try {
       const response = await fetch('/api/events')
       const data = await response.json()
-      setEvents(data)
-      if (data.length > 0) {
-        setSelectedEvent(data[0])
+      
+      // Ensure data is an array
+      const eventsArray = Array.isArray(data) ? data : []
+      setEvents(eventsArray)
+      
+      if (eventsArray.length > 0) {
+        setSelectedEvent(eventsArray[0])
       }
     } catch (error) {
       console.error('Failed to fetch events:', error)
+      setEvents([])
     } finally {
       setLoading(false)
     }
@@ -72,9 +79,13 @@ export default function Dashboard() {
     try {
       const response = await fetch(`/api/guests?eventId=${eventId}`)
       const data = await response.json()
-      setGuests(data)
+      
+      // Ensure data is an array
+      const guestsArray = Array.isArray(data) ? data : []
+      setGuests(guestsArray)
     } catch (error) {
       console.error('Failed to fetch guests:', error)
+      setGuests([])
     }
   }
 
@@ -290,6 +301,13 @@ export default function Dashboard() {
                       Bulk Import
                     </button>
                     <button
+                      onClick={() => setShowExistingGuestModal(true)}
+                      className={getButtonClasses('outline')}
+                    >
+                      <User className="w-4 h-4" />
+                      Add Existing
+                    </button>
+                    <button
                       onClick={() => setShowGuestModal(true)}
                       className={getButtonClasses('success')}
                     >
@@ -464,6 +482,18 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Existing Guest Modal */}
+      {showExistingGuestModal && selectedEvent && (
+        <AddExistingGuest
+          eventId={selectedEvent.id}
+          onGuestAdded={() => {
+            fetchGuests(selectedEvent.id)
+            setShowExistingGuestModal(false)
+          }}
+          onClose={() => setShowExistingGuestModal(false)}
+        />
       )}
     </div>
   )

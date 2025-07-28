@@ -3,11 +3,11 @@ import { prisma } from '@/lib/db'
 
 export async function GET() {
   try {
-    const events = await prisma.event.findMany({
+    const events = await (prisma as any).event.findMany({
       include: {
         _count: {
           select: {
-            guests: true,
+            eventGuests: true,
             invitations: true,
             qrCodes: true,
             surveys: true
@@ -17,7 +17,16 @@ export async function GET() {
       orderBy: { date: 'desc' }
     })
 
-    return NextResponse.json(events)
+    // Transform the data to match the expected format
+    const transformedEvents = events.map((event: any) => ({
+      ...event,
+      _count: {
+        ...event._count,
+        guests: event._count.eventGuests // Map eventGuests count to guests count
+      }
+    }))
+
+    return NextResponse.json(transformedEvents)
   } catch (error) {
     console.error('Failed to fetch events:', error)
     return NextResponse.json(

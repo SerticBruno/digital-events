@@ -30,15 +30,37 @@ export async function POST(request: NextRequest) {
 
     for (const guestData of guests) {
       try {
-        // Check if guest already exists for this event
-        const existingGuest = await prisma.guest.findFirst({
-          where: { 
-            email: guestData.email,
-            eventId
+        // Check if guest already exists globally
+        let guest = await (prisma as any).guest.findUnique({
+          where: { email: guestData.email }
+        })
+
+        if (!guest) {
+          // Create new guest
+          guest = await (prisma as any).guest.create({
+            data: {
+              firstName: guestData.firstName,
+              lastName: guestData.lastName,
+              email: guestData.email,
+              company: guestData.company || null,
+              position: guestData.position || null,
+              phone: guestData.phone || null,
+              isVip: guestData.isVip || false
+            }
+          })
+        }
+
+        // Check if guest is already in this event
+        const existingEventGuest = await (prisma as any).eventGuest.findUnique({
+          where: {
+            eventId_guestId: {
+              eventId,
+              guestId: guest.id
+            }
           }
         })
 
-        if (existingGuest) {
+        if (existingEventGuest) {
           errors.push({
             email: guestData.email,
             error: 'Guest already exists for this event'
@@ -46,17 +68,11 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Create guest
-        const guest = await prisma.guest.create({
+        // Add guest to event
+        await (prisma as any).eventGuest.create({
           data: {
             eventId,
-            firstName: guestData.firstName,
-            lastName: guestData.lastName,
-            email: guestData.email,
-            company: guestData.company || null,
-            position: guestData.position || null,
-            phone: guestData.phone || null,
-            isVip: guestData.isVip || false
+            guestId: guest.id
           }
         })
 

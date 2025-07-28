@@ -13,18 +13,30 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const guests = await prisma.guest.findMany({
+    const eventGuests = await (prisma as any).eventGuest.findMany({
       where: { eventId },
       include: {
-        invitations: {
-          orderBy: { createdAt: 'desc' },
-          take: 1
-        },
-        qrCodes: true,
-        survey: true
+        guest: {
+          include: {
+            invitations: {
+              where: { eventId },
+              orderBy: { createdAt: 'desc' },
+              take: 1
+            },
+            qrCodes: {
+              where: { eventId }
+            },
+            survey: {
+              where: { eventId }
+            }
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     })
+
+    // Extract guests from eventGuests
+    const guests = eventGuests.map((eg: any) => eg.guest)
 
     return NextResponse.json(guests)
   } catch (error) {
@@ -57,31 +69,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if guest already exists for this event
-    const existingGuest = await prisma.guest.findFirst({
-      where: { 
-        email,
-        eventId
+    // Check if guest already exists globally
+    let guest = await prisma.guest.findUnique({
+      where: { email }
+    })
+
+    if (!guest) {
+      // Create new guest
+      guest = await prisma.guest.create({
+        data: {
+          email,
+          firstName,
+          lastName,
+          company,
+          position,
+          phone,
+          isVip: isVip || false
+        }
+      })
+    }
+
+    // Check if guest is already in this event
+    const existingEventGuest = await (prisma as any).eventGuest.findUnique({
+      where: {
+        eventId_guestId: {
+          eventId,
+          guestId: guest.id
+        }
       }
     })
 
-    if (existingGuest) {
+    if (existingEventGuest) {
       return NextResponse.json(
         { error: 'Guest already exists for this event' },
         { status: 409 }
       )
     }
 
-    const guest = await prisma.guest.create({
+    // Add guest to event
+    await (prisma as any).eventGuest.create({
       data: {
         eventId,
-        email,
-        firstName,
-        lastName,
-        company,
-        position,
-        phone,
-        isVip: isVip || false
+        guestId: guest.id
       }
     })
 

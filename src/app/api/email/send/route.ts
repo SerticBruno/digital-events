@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
         }
       } catch (error) {
         console.error(`Failed to send email to guest ${guestId}:`, error)
-        results.push({ guestId, success: false, error: error.message })
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+        results.push({ guestId, success: false, error: errorMessage })
       }
     }
 
@@ -68,8 +69,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Failed to send emails:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     return NextResponse.json(
-      { error: 'Failed to send emails' },
+      { error: `Failed to send emails: ${errorMessage}` },
       { status: 500 }
     )
   }

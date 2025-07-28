@@ -21,7 +21,7 @@ model Event {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  guests      Guest[]
+  eventGuests EventGuest[]
   invitations Invitation[]
   qrCodes     QRCode[]
   surveys     Survey[]
@@ -42,13 +42,26 @@ model Guest {
   updatedAt DateTime @updatedAt
 
   // Relations
-  eventId    String
-  event      Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventGuests EventGuest[]
   invitations Invitation[]
   qrCodes    QRCode[]
   survey     Survey?
 
   @@map("guests")
+}
+
+model EventGuest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Relations
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  guestId    String
+  guest      Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, guestId])
+  @@map("event_guests")
 }
 
 model Invitation {
