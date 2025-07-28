@@ -89,4 +89,64 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const eventId = searchParams.get('eventId')
+
+    if (!eventId) {
+      return NextResponse.json(
+        { error: 'Event ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Delete the event and all related data
+    await prisma.event.delete({
+      where: { id: eventId }
+    })
+
+    return NextResponse.json({ message: 'Event deleted successfully' })
+  } catch (error) {
+    console.error('Failed to delete event:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete event' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, name, description, date, location, maxGuests } = body
+
+    if (!id || !name || !date) {
+      return NextResponse.json(
+        { error: 'Event ID, name, and date are required' },
+        { status: 400 }
+      )
+    }
+
+    const event = await prisma.event.update({
+      where: { id },
+      data: {
+        name,
+        description,
+        date: new Date(date),
+        location,
+        maxGuests: maxGuests ? parseInt(maxGuests) : null
+      }
+    })
+
+    return NextResponse.json(event)
+  } catch (error) {
+    console.error('Failed to update event:', error)
+    return NextResponse.json(
+      { error: 'Failed to update event' },
+      { status: 500 }
+    )
+  }
 } 

@@ -7,6 +7,8 @@ export async function GET(
 ) {
   try {
     const { guestId } = await params
+    const { searchParams } = new URL(request.url)
+    const eventId = searchParams.get('eventId')
 
     // Get guest data
     const guest = await prisma.guest.findUnique({
@@ -29,33 +31,59 @@ export async function GET(
     }
 
     // Get event data for this guest
-    const eventGuest = await prisma.eventGuest.findFirst({
-      where: { guestId },
-      include: {
-        event: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            date: true,
-            location: true,
+    let eventGuest
+    if (eventId) {
+      // If eventId is provided, get data for that specific event
+      eventGuest = await prisma.eventGuest.findFirst({
+        where: { 
+          guestId,
+          eventId 
+        },
+        include: {
+          event: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              date: true,
+              location: true,
+            }
           }
         }
-      }
-    })
+      })
+    } else {
+      // Fallback to first event (for backward compatibility)
+      eventGuest = await prisma.eventGuest.findFirst({
+        where: { guestId },
+        include: {
+          event: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              date: true,
+              location: true,
+            }
+          }
+        }
+      })
+    }
 
     if (!eventGuest) {
       return NextResponse.json(
-        { error: 'Guest not found in any event' },
+        { error: 'Guest not found in this event' },
         { status: 404 }
       )
     }
 
-    // Get invitation data
+    // Get invitation data for the specific event
     const invitation = await prisma.invitation.findFirst({
       where: {
         guestId,
         eventId: eventGuest.event.id
+      },
+      orderBy: {
+        createdAt: 'desc'
       },
       select: {
         id: true,
@@ -64,6 +92,7 @@ export async function GET(
         response: true,
         hasPlusOne: true,
         plusOneName: true,
+        respondedAt: true,
       }
     })
 

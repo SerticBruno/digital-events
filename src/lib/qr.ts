@@ -5,29 +5,28 @@ import { prisma } from '@/lib/db'
 
 export async function generateQRCode(guestId: string, eventId: string, type: 'REGULAR' | 'VIP' = 'REGULAR') {
   try {
+    // First, deactivate any existing active QR codes for this guest and event
+    await prisma.$executeRaw`
+      UPDATE qr_codes 
+      SET "isUsed" = true, "usedAt" = datetime('now')
+      WHERE "guestId" = ${guestId} 
+      AND "eventId" = ${eventId} 
+      AND "isUsed" = false
+    `
+
     // Generate a unique code
     const code = `${guestId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
-    // Create QR code as data URL
-    const qrDataUrl = await QRCode.toDataURL(code, {
-      width: 300,
-      margin: 2,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF'
-      }
-    })
 
     // Store in database using raw SQL
     const qrCodeId = crypto.randomUUID()
     await prisma.$executeRaw`
       INSERT INTO qr_codes (id, code, type, "guestId", "eventId", "isUsed", "createdAt")
-      VALUES (${qrCodeId}, ${qrDataUrl}, ${type}, ${guestId}, ${eventId}, false, datetime('now'))
+      VALUES (${qrCodeId}, ${code}, ${type}, ${guestId}, ${eventId}, false, datetime('now'))
     `
 
     const qrCode = {
       id: qrCodeId,
-      code: qrDataUrl,
+      code: code,
       type,
       guestId,
       eventId,
@@ -45,16 +44,12 @@ export async function generateQRCode(guestId: string, eventId: string, type: 'RE
 export async function generateQRCodesForGuest(guestId: string, eventId: string, hasPlusOne: boolean = false, isVip: boolean = false) {
   const type = isVip ? 'VIP' : 'REGULAR'
   
-  // Generate QR code for main guest
+  // Generate QR code for main guest (this will deactivate any existing active QR codes)
   const mainQR = await generateQRCode(guestId, eventId, type)
   
-  // Generate QR code for plus one if needed
-  let plusOneQR = null
-  if (hasPlusOne) {
-    plusOneQR = await generateQRCode(guestId, eventId, type)
-  }
-  
-  return { mainQR, plusOneQR }
+  // For plus-one, we don't generate a separate QR code for the same guest
+  // The plus-one will be handled separately when they respond
+  return { mainQR, plusOneQR: null }
 }
 
 export async function validateQRCode(code: string) {

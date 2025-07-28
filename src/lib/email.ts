@@ -288,25 +288,13 @@ export async function sendInvitation(guestId: string, eventId?: string) {
   }
   // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
   const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
-  const responseUrl = `${baseUrl}/respond/${guestId}`
+  const responseUrl = `${baseUrl}/respond/${guestId}?eventId=${event.id}`
   
-  // Generate QR code for this guest
-  const qrCode = `GUEST_${guestId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  
-  // Create QR code in database
+  // Generate QR code for this guest using the new function that ensures only one active QR code per user
   if (eventId) {
-    await prisma.qRCode.create({
-      data: {
-        code: qrCode,
-        type: 'REGULAR',
-        guestId,
-        eventId
-      }
-    })
+    const { generateQRCode } = await import('@/lib/qr')
+    await generateQRCode(guestId, eventId, 'REGULAR')
   }
-
-  // Generate QR code image URL for response page
-  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(responseUrl)}`
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -318,13 +306,13 @@ export async function sendInvitation(guestId: string, eventId?: string) {
       <p><strong>Location:</strong> ${event.location || 'TBA'}</p>
       ${event.description ? `<p>${event.description}</p>` : ''}
       <div style="margin: 30px 0;">
-        <a href="${responseUrl}?response=coming" style="background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; margin-bottom: 10px;">
+        <a href="${responseUrl}&response=coming" style="background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; margin-bottom: 10px;">
           I'm Coming
         </a>
-        <a href="${responseUrl}?response=coming_with_plus_one" style="background: #2196F3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; margin-bottom: 10px;">
+        <a href="${responseUrl}&response=coming_with_plus_one" style="background: #2196F3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; margin-bottom: 10px;">
           I'm Coming with Guest
         </a>
-        <a href="${responseUrl}?response=not_coming" style="background: #f44336; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin-bottom: 10px;">
+        <a href="${responseUrl}&response=not_coming" style="background: #f44336; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin-bottom: 10px;">
           I Can't Come
         </a>
       </div>
@@ -333,15 +321,6 @@ export async function sendInvitation(guestId: string, eventId?: string) {
           <strong>Plus-One Option:</strong> You can bring a guest with you to this event. 
           Click "I'm Coming with Guest" above and we'll ask for your guest's email.
         </p>
-      </div>
-      <div style="background-color: #f9f9f9; border: 1px solid #ddd; padding: 15px; margin: 20px 0; border-radius: 4px;">
-        <p style="margin: 0; color: #666; font-size: 14px;">
-          <strong>Quick Response:</strong> Scan this QR code with your phone to quickly respond to this invitation.
-        </p>
-        <div style="text-align: center; margin-top: 15px;">
-          <img src="${qrCodeImageUrl}" alt="Response QR Code" style="border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: white;" />
-          <p style="margin-top: 10px; font-family: monospace; font-size: 12px; color: #666;">Scan to respond to invitation</p>
-        </div>
       </div>
       <p>Best regards,<br>Event Team</p>
     </div>
@@ -450,7 +429,31 @@ export async function sendQRCode(guestId: string, eventId?: string) {
     `
   }
 
-  if (qrCodes.length === 0) throw new Error('No QR codes available')
+  if (qrCodes.length === 0) {
+    // Generate a new QR code if none exists
+    const { generateQRCode } = await import('@/lib/qr')
+    await generateQRCode(guestId, eventId || event.id, 'REGULAR')
+    
+    // Fetch the newly created QR code
+    if (eventId) {
+      qrCodes = await prisma.$queryRaw`
+        SELECT code, "isUsed"
+        FROM qr_codes
+        WHERE "guestId" = ${guestId}
+        AND "eventId" = ${eventId}
+        AND "isUsed" = false
+      `
+    } else {
+      qrCodes = await prisma.$queryRaw`
+        SELECT code, "isUsed"
+        FROM qr_codes
+        WHERE "guestId" = ${guestId}
+        AND "isUsed" = false
+      `
+    }
+    
+    if (qrCodes.length === 0) throw new Error('Failed to generate QR code')
+  }
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -549,7 +552,7 @@ export async function sendPlusOneInvitation(guestId: string, plusOneEmail: strin
   }
   // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
   const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
-  const responseUrl = `${baseUrl}/respond/${guestId}?plusOne=true`
+  const responseUrl = `${baseUrl}/respond/${guestId}?eventId=${event.id}&plusOne=true`
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -652,7 +655,19 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
     maxGuests: eventData.eventMaxGuests
   }
 
-  // Get QR codes using raw SQL
+  // Find the plus-one guest by email
+  const plusOneGuests = await prisma.$queryRaw<Array<{
+    id: string;
+  }>>`
+    SELECT id
+    FROM guests
+    WHERE email = ${plusOneEmail}
+  `
+
+  if (plusOneGuests.length === 0) throw new Error('Plus-one guest not found')
+  const plusOneGuestId = plusOneGuests[0].id
+
+  // Get QR code for the plus-one guest
   let qrCodes: Array<{
     code: string;
     isUsed: boolean;
@@ -662,25 +677,46 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
     qrCodes = await prisma.$queryRaw`
       SELECT code, "isUsed"
       FROM qr_codes
-      WHERE "guestId" = ${guestId}
+      WHERE "guestId" = ${plusOneGuestId}
       AND "eventId" = ${eventId}
       AND "isUsed" = false
-      ORDER BY "createdAt" ASC
     `
   } else {
     qrCodes = await prisma.$queryRaw`
       SELECT code, "isUsed"
       FROM qr_codes
-      WHERE "guestId" = ${guestId}
+      WHERE "guestId" = ${plusOneGuestId}
       AND "isUsed" = false
-      ORDER BY "createdAt" ASC
     `
   }
 
-  if (qrCodes.length < 2) throw new Error('Plus-one QR code not available')
+  if (qrCodes.length === 0) {
+    // Generate a new QR code for the plus-one if none exists
+    const { generateQRCode } = await import('@/lib/qr')
+    await generateQRCode(plusOneGuestId, eventId || event.id, 'REGULAR')
+    
+    // Fetch the newly created QR code
+    if (eventId) {
+      qrCodes = await prisma.$queryRaw`
+        SELECT code, "isUsed"
+        FROM qr_codes
+        WHERE "guestId" = ${plusOneGuestId}
+        AND "eventId" = ${eventId}
+        AND "isUsed" = false
+      `
+    } else {
+      qrCodes = await prisma.$queryRaw`
+        SELECT code, "isUsed"
+        FROM qr_codes
+        WHERE "guestId" = ${plusOneGuestId}
+        AND "isUsed" = false
+      `
+    }
+    
+    if (qrCodes.length === 0) throw new Error('Failed to generate QR code for plus-one')
+  }
 
-  // Use the second QR code for the plus-one
-  const plusOneQRCode = qrCodes[1]
+  const plusOneQRCode = qrCodes[0]
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User } from 'lucide-react'
+import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User, RefreshCw, Edit, Trash2 } from 'lucide-react'
 import EventForm from '@/components/EventForm'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
@@ -13,6 +13,7 @@ interface Event {
   name: string
   date: string
   location?: string
+  description?: string
   _count: {
     guests: number
     invitations: number
@@ -56,6 +57,11 @@ export default function Dashboard() {
   const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set())
   const [sendingEmails, setSendingEmails] = useState(false)
   const [updatingPlusOne, setUpdatingPlusOne] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [showEditEventModal, setShowEditEventModal] = useState(false)
+  const [showEditGuestModal, setShowEditGuestModal] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+  const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
 
   useEffect(() => {
     fetchEvents()
@@ -65,6 +71,17 @@ export default function Dashboard() {
     if (selectedEvent) {
       fetchGuests(selectedEvent.id)
     }
+  }, [selectedEvent])
+
+  // Auto-refresh guests every 30 seconds
+  useEffect(() => {
+    if (!selectedEvent) return
+
+    const interval = setInterval(() => {
+      fetchGuests(selectedEvent.id)
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
   }, [selectedEvent])
 
   const fetchEvents = async () => {
@@ -89,6 +106,7 @@ export default function Dashboard() {
 
   const fetchGuests = async (eventId: string) => {
     try {
+      setRefreshing(true)
       const response = await fetch(`/api/guests?eventId=${eventId}`)
       const data = await response.json()
       
@@ -98,6 +116,8 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Failed to fetch guests:', error)
       setGuests([])
+    } finally {
+      setRefreshing(false)
     }
   }
 
@@ -132,6 +152,12 @@ export default function Dashboard() {
       })
       
       if (response.ok) {
+        const guest = await response.json()
+        
+        // Automatically generate a QR code for the new guest
+        const { generateQRCode } = await import('@/lib/qr')
+        await generateQRCode(guest.id, selectedEvent.id, data.isVip ? 'VIP' : 'REGULAR')
+        
         await fetchGuests(selectedEvent.id)
         setShowGuestModal(false)
       } else {
@@ -154,6 +180,18 @@ export default function Dashboard() {
       })
       
       if (response.ok) {
+        const result = await response.json()
+        
+        // Generate QR codes for all newly added guests
+        const { generateQRCode } = await import('@/lib/qr')
+        for (const resultItem of result.results || []) {
+          if (resultItem.success) {
+            // Find the guest data to get VIP status
+            const guestData = guests.find(g => g.email === resultItem.email)
+            await generateQRCode(resultItem.id, selectedEvent.id, guestData?.isVip ? 'VIP' : 'REGULAR')
+          }
+        }
+        
         await fetchGuests(selectedEvent.id)
         setShowCSVModal(false)
       } else {
@@ -263,7 +301,7 @@ export default function Dashboard() {
           message += `, ${failureCount} failed`
         }
         
-        console.log('Email sending results:', result.results)
+
         alert(message)
         clearSelection()
         if (selectedEvent) {
@@ -335,7 +373,7 @@ export default function Dashboard() {
           message += `, ${failureCount} failed`
         }
         
-        console.log('Plus-one invitation results:', result.results)
+
         alert(message)
         clearSelection()
         if (selectedEvent) {
@@ -352,64 +390,82 @@ export default function Dashboard() {
     }
   }
 
-  const sendPlusOneQRCodes = async (guestIds: string[]) => {
+  const sendQRCodesToConfirmedAttendees = async () => {
     if (!selectedEvent) {
       alert('Please select an event first')
       return
     }
 
-    if (guestIds.length === 0) {
-      alert('Please select at least one guest')
+    // Filter for confirmed attendees only
+    const confirmedGuests = guests.filter(guest => 
+      guest.invitations[0]?.response === 'COMING' || 
+      guest.invitations[0]?.response === 'COMING_WITH_PLUS_ONE'
+    )
+
+    if (confirmedGuests.length === 0) {
+      alert('No confirmed attendees found. Please wait for guests to respond to invitations.')
       return
-    }
-
-    // Prompt for plus-one information
-    const plusOneEmails: string[] = []
-    const plusOneNames: string[] = []
-
-    for (const guestId of guestIds) {
-      const guest = guests.find(g => g.id === guestId)
-      if (!guest) continue
-
-      const plusOneEmail = prompt(`Enter plus-one email for ${guest.firstName} ${guest.lastName}:`)
-      const plusOneName = prompt(`Enter plus-one name for ${guest.firstName} ${guest.lastName}:`)
-      
-      if (plusOneEmail && plusOneName) {
-        plusOneEmails.push(plusOneEmail)
-        plusOneNames.push(plusOneName)
-      } else {
-        alert('Plus-one email and name are required')
-        return
-      }
     }
 
     setSendingEmails(true)
     try {
+      // Send QR codes to main guests
+      const mainGuestIds = confirmedGuests.map(g => g.id)
       const response = await fetch('/api/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          type: 'plus_one_qr_code', 
-          guestIds, 
-          eventId: selectedEvent.id,
-          plusOneEmails,
-          plusOneNames
+          type: 'qr_code', 
+          guestIds: mainGuestIds, 
+          eventId: selectedEvent.id
         })
       })
       const result = await response.json()
       
       if (response.ok) {
-        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
-        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        let successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+        let failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
         
-        let message = `Successfully sent ${successCount} plus-one QR codes`
+        // Send QR codes to plus-one guests
+        const plusOneGuests = confirmedGuests.filter(guest => 
+          guest.invitations[0]?.response === 'COMING_WITH_PLUS_ONE' && 
+          guest.invitations[0]?.plusOneEmail
+        )
+
+        if (plusOneGuests.length > 0) {
+          const plusOneEmails = plusOneGuests.map(g => g.invitations[0]?.plusOneEmail || '')
+          const plusOneNames = plusOneGuests.map(g => g.invitations[0]?.plusOneName || `Guest of ${g.firstName} ${g.lastName}`)
+          
+          const plusOneResponse = await fetch('/api/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              type: 'plus_one_qr_code', 
+              guestIds: plusOneGuests.map(g => g.id), 
+              eventId: selectedEvent.id,
+              plusOneEmails,
+              plusOneNames
+            })
+          })
+          const plusOneResult = await plusOneResponse.json()
+          
+          if (plusOneResponse.ok) {
+            const plusOneSuccessCount = plusOneResult.results?.filter((r: { success: boolean }) => r.success).length || 0
+            const plusOneFailureCount = plusOneResult.results?.filter((r: { success: boolean }) => !r.success).length || 0
+            
+            successCount += plusOneSuccessCount
+            failureCount += plusOneFailureCount
+          } else {
+            failureCount += plusOneGuests.length
+          }
+        }
+        
+        let message = `Successfully sent QR codes to ${successCount} attendees`
         if (failureCount > 0) {
           message += `, ${failureCount} failed`
         }
         
-        console.log('Plus-one QR code results:', result.results)
         alert(message)
-        clearSelection()
         if (selectedEvent) {
           fetchGuests(selectedEvent.id)
         }
@@ -417,8 +473,154 @@ export default function Dashboard() {
         alert(`Error: ${result.error}`)
       }
     } catch (error) {
-      console.error('Failed to send plus-one QR codes:', error)
-      alert('Failed to send plus-one QR codes')
+      console.error('Failed to send QR codes to confirmed attendees:', error)
+      alert('Failed to send QR codes to confirmed attendees')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
+  const editEvent = async (data: { id: string; name: string; date: string; location?: string; description?: string }) => {
+    try {
+      const response = await fetch('/api/events', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      
+      if (response.ok) {
+        await fetchEvents()
+        setShowEditEventModal(false)
+        setEditingEvent(null)
+        // Update selected event if it was the one being edited
+        if (selectedEvent?.id === data.id) {
+          const updatedEvent = await response.json()
+          setSelectedEvent(updatedEvent)
+        }
+      } else {
+        throw new Error('Failed to update event')
+      }
+    } catch (error) {
+      console.error('Failed to update event:', error)
+      alert('Failed to update event')
+    }
+  }
+
+  const deleteEvent = async (eventId: string) => {
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/events?eventId=${eventId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        await fetchEvents()
+        if (selectedEvent?.id === eventId) {
+          setSelectedEvent(null)
+        }
+      } else {
+        throw new Error('Failed to delete event')
+      }
+    } catch (error) {
+      console.error('Failed to delete event:', error)
+      alert('Failed to delete event')
+    }
+  }
+
+  const editGuest = async (data: { id: string; firstName: string; lastName: string; email: string; company?: string; position?: string; phone?: string; isVip: boolean }) => {
+    try {
+      const response = await fetch('/api/guests', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      
+      if (response.ok) {
+        if (selectedEvent) {
+          await fetchGuests(selectedEvent.id)
+        }
+        setShowEditGuestModal(false)
+        setEditingGuest(null)
+      } else {
+        throw new Error('Failed to update guest')
+      }
+    } catch (error) {
+      console.error('Failed to update guest:', error)
+      alert('Failed to update guest')
+    }
+  }
+
+  const deleteGuest = async (guestId: string) => {
+    if (!selectedEvent) return
+
+    if (!confirm('Are you sure you want to remove this guest from the event?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/guests?guestId=${guestId}&eventId=${selectedEvent.id}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        await fetchGuests(selectedEvent.id)
+      } else {
+        throw new Error('Failed to remove guest from event')
+      }
+    } catch (error) {
+      console.error('Failed to remove guest from event:', error)
+      alert('Failed to remove guest from event')
+    }
+  }
+
+  const generateQRCodes = async (guestIds: string[]) => {
+    if (!selectedEvent) return
+
+    setSendingEmails(true)
+    try {
+      const { generateQRCode } = await import('@/lib/qr')
+      
+      for (const guestId of guestIds) {
+        const guest = guests.find(g => g.id === guestId)
+        if (guest) {
+          await generateQRCode(guestId, selectedEvent.id, guest.isVip ? 'VIP' : 'REGULAR')
+        }
+      }
+      
+      await fetchGuests(selectedEvent.id)
+      alert(`Successfully generated QR codes for ${guestIds.length} guests`)
+      clearSelection()
+    } catch (error) {
+      console.error('Failed to generate QR codes:', error)
+      alert('Failed to generate QR codes')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
+  const regenerateMissingQRCodes = async () => {
+    if (!selectedEvent) return
+
+    setSendingEmails(true)
+    try {
+      const { generateQRCode } = await import('@/lib/qr')
+      
+      const guestsWithoutQRCodes = guests.filter(guest => 
+        !guest.qrCodes || guest.qrCodes.length === 0
+      )
+      
+      for (const guest of guestsWithoutQRCodes) {
+        await generateQRCode(guest.id, selectedEvent.id, guest.isVip ? 'VIP' : 'REGULAR')
+      }
+      
+      await fetchGuests(selectedEvent.id)
+      alert(`Successfully generated QR codes for ${guestsWithoutQRCodes.length} guests`)
+    } catch (error) {
+      console.error('Failed to regenerate QR codes:', error)
+      alert('Failed to regenerate QR codes')
     } finally {
       setSendingEmails(false)
     }
@@ -446,6 +648,14 @@ export default function Dashboard() {
               <p className="text-gray-600">Manage your events and guests</p>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => selectedEvent && fetchGuests(selectedEvent.id)}
+                disabled={refreshing}
+                className={getButtonClasses('secondary')}
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
               <a
                 href="/scanner"
                 className={getButtonClasses('warning')}
@@ -468,9 +678,32 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Event Selection */}
         <div className="mb-8">
-          <label className={componentStyles.label}>
-            Select Event
-          </label>
+          <div className="flex justify-between items-center mb-4">
+            <label className={componentStyles.label}>
+              Select Event
+            </label>
+            {selectedEvent && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setEditingEvent(selectedEvent)
+                    setShowEditEventModal(true)
+                  }}
+                  className={getButtonClasses('outline')}
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit Event
+                </button>
+                <button
+                  onClick={() => deleteEvent(selectedEvent.id)}
+                  className={getButtonClasses('danger')}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Event
+                </button>
+              </div>
+            )}
+          </div>
 
           <select
             value={selectedEvent?.id || ''}
@@ -627,12 +860,28 @@ export default function Dashboard() {
                     {sendingEmails ? 'Sending...' : `Send Plus-One Invitations (${selectedGuests.size})`}
                   </button>
                   <button
-                    onClick={() => sendPlusOneQRCodes(Array.from(selectedGuests))}
-                    disabled={selectedGuests.size === 0 || sendingEmails}
+                    onClick={sendQRCodesToConfirmedAttendees}
+                    disabled={sendingEmails}
                     className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
                   >
                     <QrCode className="w-4 h-4" />
-                    {sendingEmails ? 'Sending...' : `Send Plus-One QR Codes (${selectedGuests.size})`}
+                    {sendingEmails ? 'Sending...' : 'Send QR Codes to Confirmed Attendees'}
+                  </button>
+                  <button
+                    onClick={() => generateQRCodes(Array.from(selectedGuests))}
+                    disabled={selectedGuests.size === 0 || sendingEmails}
+                    className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    {sendingEmails ? 'Generating...' : `Generate QR Codes (${selectedGuests.size})`}
+                  </button>
+                  <button
+                    onClick={regenerateMissingQRCodes}
+                    disabled={sendingEmails}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    {sendingEmails ? 'Regenerating...' : 'Regenerate Missing QR Codes'}
                   </button>
                   <button className={getButtonClasses('secondary')}>
                     <Download className="w-4 h-4" />
@@ -678,9 +927,12 @@ export default function Dashboard() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Type
                       </th>
-                                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                           Plus-One
-                         </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Invitation Sent
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Plus-One
+                      </th>
                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                            QR Code
                          </th>
@@ -692,7 +944,7 @@ export default function Dashboard() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {guests.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                        <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                           No guests found for this event. Add some guests to get started.
                         </td>
                       </tr>
@@ -749,6 +1001,19 @@ export default function Dashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            guest.invitations[0]?.status === 'SENT' 
+                              ? 'bg-green-100 text-green-800'
+                              : guest.invitations[0]?.status === 'PENDING'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {guest.invitations[0]?.status === 'SENT' ? 'Sent' :
+                             guest.invitations[0]?.status === 'PENDING' ? 'Pending' :
+                             'Not Sent'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <button
                             onClick={() => togglePlusOne(guest.id, guest.invitations[0]?.hasPlusOne || false)}
                             disabled={updatingPlusOne}
@@ -760,47 +1025,51 @@ export default function Dashboard() {
                           >
                             {guest.invitations[0]?.hasPlusOne ? 'Enabled' : 'Disabled'}
                           </button>
-                          {guest.invitations[0]?.hasPlusOne && (
-                            <div className="text-xs text-green-600 mt-1">
-                              Guest can bring +1
-                            </div>
-                          )}
+                          
                                                    </td>
                            <td className="px-6 py-4 whitespace-nowrap">
                              {guest.qrCodes && guest.qrCodes.length > 0 ? (
                                <div className="space-y-1">
                                  {guest.qrCodes.map((qr, index) => (
                                    <div key={index} className="flex items-center space-x-2">
-                                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                       qr.isUsed 
-                                         ? 'bg-red-100 text-red-800' 
-                                         : 'bg-green-100 text-green-800'
-                                     }`}>
-                                       {qr.isUsed ? 'Used' : 'Active'}
+                                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                       Active
                                      </span>
                                      <span className="text-xs text-gray-500 font-mono">
-                                       {qr.code.substring(0, 8)}...
+                                       {qr.code.startsWith('data:') 
+                                         ? 'QR Code' 
+                                         : qr.code.split('_').pop()?.substring(0, 6) || qr.code.substring(0, 8)
+                                       }
                                      </span>
                                    </div>
                                  ))}
                                </div>
                              ) : (
-                               <span className="text-xs text-gray-400">No QR Code</span>
+                               <span className="text-xs text-gray-400">No Active QR Code</span>
                              )}
                            </td>
                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <a
-                            href={`/respond/${guest.id}`}
+                            href={`/respond/${guest.id}?eventId=${selectedEvent?.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-green-600 hover:text-green-900 mr-3"
                           >
                             View Response
                           </a>
-                          <button className="text-blue-600 hover:text-blue-900 mr-3">
+                          <button 
+                            onClick={() => {
+                              setEditingGuest(guest)
+                              setShowEditGuestModal(true)
+                            }}
+                            className="text-blue-600 hover:text-blue-900 mr-3"
+                          >
                             Edit
                           </button>
-                          <button className="text-red-600 hover:text-red-900">
+                          <button 
+                            onClick={() => deleteGuest(guest.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
                             Remove
                           </button>
                         </td>
@@ -885,6 +1154,69 @@ export default function Dashboard() {
           }}
           onClose={() => setShowExistingGuestModal(false)}
         />
+      )}
+
+      {/* Edit Event Modal */}
+      {showEditEventModal && editingEvent && (
+        <div className={componentStyles.modal.overlay}>
+          <div className={componentStyles.modal.container}>
+            <div className={componentStyles.modal.header}>
+              <h2 className="text-2xl font-bold text-gray-900">Edit Event</h2>
+              <button
+                onClick={() => {
+                  setShowEditEventModal(false)
+                  setEditingEvent(null)
+                }}
+                className={componentStyles.modal.closeButton}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className={componentStyles.modal.content}>
+              <EventForm 
+                onSubmit={(data) => editEvent({ ...data, id: editingEvent.id })} 
+                initialData={{
+                  name: editingEvent.name,
+                  date: editingEvent.date,
+                  location: editingEvent.location,
+                  description: editingEvent.description
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Guest Modal */}
+      {showEditGuestModal && editingGuest && (
+        <div className={componentStyles.modal.overlay}>
+          <div className={componentStyles.modal.container}>
+            <div className={componentStyles.modal.header}>
+              <h2 className="text-2xl font-bold text-gray-900">Edit Guest</h2>
+              <button
+                onClick={() => {
+                  setShowEditGuestModal(false)
+                  setEditingGuest(null)
+                }}
+                className={componentStyles.modal.closeButton}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className={componentStyles.modal.content}>
+              <GuestForm 
+                onSubmit={(data) => editGuest({ ...data, id: editingGuest.id })} 
+                initialData={{
+                  firstName: editingGuest.firstName,
+                  lastName: editingGuest.lastName,
+                  email: editingGuest.email,
+                  company: editingGuest.company,
+                  isVip: editingGuest.isVip
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

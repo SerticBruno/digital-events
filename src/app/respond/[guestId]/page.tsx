@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { CheckCircle, XCircle, UserPlus, Calendar, MapPin } from 'lucide-react'
+import { CheckCircle, XCircle, UserPlus, Calendar, MapPin, RefreshCw } from 'lucide-react'
 
 interface Guest {
   id: string
@@ -27,6 +27,7 @@ export default function RespondPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const guestId = params.guestId as string
+  const eventId = searchParams.get('eventId')
 
   const response = searchParams.get('response')
 
@@ -39,6 +40,7 @@ export default function RespondPage() {
   const [error, setError] = useState<string | null>(null)
   const [plusOneEmail, setPlusOneEmail] = useState('')
   const [showPlusOneForm, setShowPlusOneForm] = useState(false)
+  const [invitation, setInvitation] = useState<any>(null)
 
   useEffect(() => {
     if (guestId) {
@@ -60,20 +62,26 @@ export default function RespondPage() {
 
   const fetchGuestData = useCallback(async () => {
     try {
-      const response = await fetch(`/api/guests/${guestId}`)
+      // If we have eventId from URL, use it to get event-specific data
+      const url = eventId 
+        ? `/api/guests/${guestId}?eventId=${eventId}`
+        : `/api/guests/${guestId}`
+      
+      const response = await fetch(url)
       if (!response.ok) {
         throw new Error('Guest not found')
       }
       const data = await response.json()
       setGuest(data.guest)
       setEvent(data.event)
+      setInvitation(data.invitation)
     } catch (error) {
       console.error('Failed to fetch guest data:', error)
       setError('Guest not found or invitation has expired')
     } finally {
       setLoading(false)
     }
-  }, [guestId])
+  }, [guestId, eventId])
 
   const handleResponse = useCallback(async (responseType: string) => {
     if (!guest || !event) return
@@ -87,6 +95,8 @@ export default function RespondPage() {
         plusOneEmail: responseType === 'coming_with_plus_one' ? plusOneEmail : undefined
       }
 
+      console.log('Submitting response:', responseData)
+
       const response = await fetch('/api/guests/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,8 +104,13 @@ export default function RespondPage() {
       })
 
       if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Response API error:', errorData)
         throw new Error('Failed to submit response')
       }
+
+      const result = await response.json()
+      console.log('Response submitted successfully:', result)
 
       setSubmitted(true)
     } catch (error) {
@@ -245,6 +260,29 @@ export default function RespondPage() {
                 <p className="text-sm text-gray-600">{guest.company}</p>
               )}
             </div>
+
+            {/* Debug Info */}
+            {invitation && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="text-sm font-semibold text-yellow-800 mb-2">Debug Info:</h4>
+                    <div className="text-xs text-yellow-700 space-y-1">
+                      <div>Status: {invitation.status}</div>
+                      <div>Response: {invitation.response || 'None'}</div>
+                      <div>Responded At: {invitation.respondedAt ? new Date(invitation.respondedAt).toLocaleString() : 'Not responded'}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={fetchGuestData}
+                    className="text-yellow-700 hover:text-yellow-900"
+                    title="Refresh data"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Response Options */}
             {!showPlusOneForm ? (

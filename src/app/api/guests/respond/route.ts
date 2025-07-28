@@ -6,6 +6,8 @@ export async function POST(request: NextRequest) {
       const body = await request.json()
   const { guestId, eventId, response, plusOneEmail } = body
 
+    console.log('Respond API called with:', { guestId, eventId, response, plusOneEmail })
+    
     if (!guestId || !eventId || !response) {
       return NextResponse.json(
         { error: 'Guest ID, event ID, and response are required' },
@@ -30,6 +32,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    console.log('EventGuest found:', eventGuest)
+
     if (!eventGuest) {
       return NextResponse.json(
         { error: 'Guest not found in this event' },
@@ -37,11 +41,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find existing invitation or create new one
+    // Find the most recent invitation or create new one
     let invitation = await prisma.invitation.findFirst({
       where: {
         guestId,
         eventId
+      },
+      orderBy: {
+        createdAt: 'desc'
       }
     })
 
@@ -114,26 +121,14 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        // Generate QR codes for both guests
-        const originalQRCode = `GUEST_${guestId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        const plusOneQRCode = `GUEST_${plusOneGuest.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-        await prisma.qRCode.createMany({
-          data: [
-            {
-              code: originalQRCode,
-              type: 'REGULAR',
-              guestId,
-              eventId
-            },
-            {
-              code: plusOneQRCode,
-              type: 'REGULAR',
-              guestId: plusOneGuest.id,
-              eventId
-            }
-          ]
-        })
+        // Generate QR codes for both guests using the new function that ensures only one active QR code per user
+        const { generateQRCode } = await import('@/lib/qr')
+        
+        // Generate QR code for the original guest (this will deactivate any existing active QR codes)
+        await generateQRCode(guestId, eventId, 'REGULAR')
+        
+        // Generate QR code for the plus-one guest
+        await generateQRCode(plusOneGuest.id, eventId, 'REGULAR')
 
         // Send invitation email to plus-one
         const { sendInvitation } = await import('@/lib/email')
@@ -145,6 +140,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log('Response saved successfully:', invitation)
+    
     return NextResponse.json({
       message: 'Response recorded successfully',
       invitation
