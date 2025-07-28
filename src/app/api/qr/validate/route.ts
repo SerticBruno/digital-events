@@ -3,48 +3,38 @@ import { prisma } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const { qrCode, eventId } = await request.json()
+    const body = await request.json()
+    const { qrCode } = body
 
-    if (!qrCode || !eventId) {
+    if (!qrCode) {
       return NextResponse.json(
-        { success: false, message: 'QR code and event ID are required' },
+        { error: 'QR code is required' },
         { status: 400 }
       )
     }
 
-    // Find the QR code in database
+    // Find the QR code
     const qrCodeRecord = await prisma.qRCode.findFirst({
-      where: {
-        code: qrCode,
-        eventId: eventId,
-        type: 'ENTRY'
-      },
+      where: { code: qrCode },
       include: {
-        guest: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            company: true,
-            isVip: true
-          }
-        }
+        guest: true,
+        event: true
       }
     })
 
     if (!qrCodeRecord) {
       return NextResponse.json(
-        { success: false, message: 'QR code not found for this event' },
+        { error: 'Invalid QR code' },
         { status: 404 }
       )
     }
 
+    // Check if QR code is already used
     if (qrCodeRecord.isUsed) {
       return NextResponse.json(
         { 
-          success: false, 
-          message: 'QR code already used',
+          error: 'QR code already used',
+          usedAt: qrCodeRecord.usedAt,
           guest: qrCodeRecord.guest
         },
         { status: 409 }
@@ -61,15 +51,27 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      success: true,
       message: 'QR code validated successfully',
-      guest: qrCodeRecord.guest
+      guest: {
+        id: qrCodeRecord.guest.id,
+        firstName: qrCodeRecord.guest.firstName,
+        lastName: qrCodeRecord.guest.lastName,
+        email: qrCodeRecord.guest.email,
+        isVip: qrCodeRecord.guest.isVip
+      },
+      event: {
+        id: qrCodeRecord.event.id,
+        name: qrCodeRecord.event.name,
+        date: qrCodeRecord.event.date,
+        location: qrCodeRecord.event.location
+      },
+      usedAt: new Date()
     })
 
   } catch (error) {
-    console.error('QR validation error:', error)
+    console.error('Failed to validate QR code:', error)
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { error: 'Failed to validate QR code' },
       { status: 500 }
     )
   }

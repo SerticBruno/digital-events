@@ -146,11 +146,25 @@ export default function QRScanner() {
       const response = await fetch('/api/qr/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qrCode, eventId: selectedEvent })
+        body: JSON.stringify({ qrCode })
       })
 
       const result = await response.json()
-      setScanResult(result)
+      
+      // Convert the new API response format to match the expected interface
+      if (response.ok) {
+        setScanResult({
+          success: true,
+          message: result.message,
+          guest: result.guest
+        })
+      } else {
+        setScanResult({
+          success: false,
+          message: result.error,
+          guest: result.guest
+        })
+      }
       
       // Auto-clear result after 5 seconds
       setTimeout(() => {

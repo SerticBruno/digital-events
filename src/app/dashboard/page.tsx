@@ -32,6 +32,15 @@ interface Guest {
     type: string
     status: string
     response?: string
+    hasPlusOne?: boolean
+    plusOneName?: string
+    plusOneEmail?: string
+  }>
+  qrCodes: Array<{
+    code: string
+    type: string
+    isUsed: boolean
+    usedAt?: string
   }>
 }
 
@@ -46,6 +55,7 @@ export default function Dashboard() {
   const [showExistingGuestModal, setShowExistingGuestModal] = useState(false)
   const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set())
   const [sendingEmails, setSendingEmails] = useState(false)
+  const [updatingPlusOne, setUpdatingPlusOne] = useState(false)
 
   useEffect(() => {
     fetchEvents()
@@ -171,6 +181,34 @@ export default function Dashboard() {
 
   const clearSelection = () => {
     setSelectedGuests(new Set())
+  }
+
+  const togglePlusOne = async (guestId: string, currentHasPlusOne: boolean) => {
+    if (!selectedEvent) return
+
+    setUpdatingPlusOne(true)
+    try {
+      const response = await fetch('/api/guests/plus-one', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          guestId, 
+          eventId: selectedEvent.id, 
+          hasPlusOne: !currentHasPlusOne 
+        })
+      })
+
+      if (response.ok) {
+        await fetchGuests(selectedEvent.id)
+      } else {
+        alert('Failed to update plus-one status')
+      }
+    } catch (error) {
+      console.error('Failed to update plus-one status:', error)
+      alert('Failed to update plus-one status')
+    } finally {
+      setUpdatingPlusOne(false)
+    }
   }
 
   const testEmail = async () => {
@@ -433,6 +471,7 @@ export default function Dashboard() {
           <label className={componentStyles.label}>
             Select Event
           </label>
+
           <select
             value={selectedEvent?.id || ''}
             onChange={(e) => {
@@ -503,7 +542,7 @@ export default function Dashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className={componentStyles.card.base}>
+            <div className={`${componentStyles.card.base} mb-8`}>
               <div className={componentStyles.card.header}>
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
@@ -613,7 +652,7 @@ export default function Dashboard() {
             {/* Guests Table */}
             <div className={componentStyles.card.base}>
               <div className={componentStyles.card.header}>
-                <h3 className="text-lg font-medium text-gray-900">Guest List</h3>
+                <h3 className="text-lg font-medium text-gray-900 ">Guest List</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -639,13 +678,26 @@ export default function Dashboard() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Type
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
+                                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                           Plus-One
+                         </th>
+                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                           QR Code
+                         </th>
+                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                           Actions
+                         </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {guests.map((guest) => (
+                    {guests.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                          No guests found for this event. Add some guests to get started.
+                        </td>
+                      </tr>
+                    ) : (
+                      guests.map((guest) => (
                       <tr key={guest.id} className={selectedGuests.has(guest.id) ? 'bg-blue-50' : ''}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <input
@@ -667,15 +719,27 @@ export default function Dashboard() {
                           {guest.company || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            guest.invitations[0]?.response === 'COMING' 
-                              ? 'bg-green-100 text-green-800'
-                              : guest.invitations[0]?.response === 'NOT_COMING'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {guest.invitations[0]?.response || 'No Response'}
-                          </span>
+                          <div className="space-y-1">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              guest.invitations[0]?.response === 'COMING' 
+                                ? 'bg-green-100 text-green-800'
+                                : guest.invitations[0]?.response === 'COMING_WITH_PLUS_ONE'
+                                ? 'bg-blue-100 text-blue-800'
+                                : guest.invitations[0]?.response === 'NOT_COMING'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {guest.invitations[0]?.response === 'COMING' ? 'Coming' :
+                               guest.invitations[0]?.response === 'COMING_WITH_PLUS_ONE' ? 'Coming +1' :
+                               guest.invitations[0]?.response === 'NOT_COMING' ? 'Not Coming' :
+                               'No Response'}
+                            </span>
+                                                 {guest.invitations[0]?.plusOneEmail && (
+                       <div className="text-xs text-gray-500">
+                         +1: {guest.invitations[0].plusOneEmail}
+                       </div>
+                     )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -684,7 +748,55 @@ export default function Dashboard() {
                             {guest.isVip ? 'VIP' : 'Regular'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => togglePlusOne(guest.id, guest.invitations[0]?.hasPlusOne || false)}
+                            disabled={updatingPlusOne}
+                            className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                              guest.invitations[0]?.hasPlusOne 
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                            }`}
+                          >
+                            {guest.invitations[0]?.hasPlusOne ? 'Enabled' : 'Disabled'}
+                          </button>
+                          {guest.invitations[0]?.hasPlusOne && (
+                            <div className="text-xs text-green-600 mt-1">
+                              Guest can bring +1
+                            </div>
+                          )}
+                                                   </td>
+                           <td className="px-6 py-4 whitespace-nowrap">
+                             {guest.qrCodes && guest.qrCodes.length > 0 ? (
+                               <div className="space-y-1">
+                                 {guest.qrCodes.map((qr, index) => (
+                                   <div key={index} className="flex items-center space-x-2">
+                                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                       qr.isUsed 
+                                         ? 'bg-red-100 text-red-800' 
+                                         : 'bg-green-100 text-green-800'
+                                     }`}>
+                                       {qr.isUsed ? 'Used' : 'Active'}
+                                     </span>
+                                     <span className="text-xs text-gray-500 font-mono">
+                                       {qr.code.substring(0, 8)}...
+                                     </span>
+                                   </div>
+                                 ))}
+                               </div>
+                             ) : (
+                               <span className="text-xs text-gray-400">No QR Code</span>
+                             )}
+                           </td>
+                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <a
+                            href={`/respond/${guest.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-600 hover:text-green-900 mr-3"
+                          >
+                            View Response
+                          </a>
                           <button className="text-blue-600 hover:text-blue-900 mr-3">
                             Edit
                           </button>
@@ -693,7 +805,8 @@ export default function Dashboard() {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                    )}
                   </tbody>
                 </table>
               </div>

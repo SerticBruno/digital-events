@@ -33,10 +33,10 @@ export async function GET() {
     const countMap = new Map<string, { eventGuests: number; invitations: number; qrCodes: number; surveys: number }>()
     eventCounts.forEach(count => {
       countMap.set(count.eventId, {
-        eventGuests: count.eventGuests,
-        invitations: count.invitations,
-        qrCodes: count.qrCodes,
-        surveys: count.surveys
+        eventGuests: Number(count.eventGuests),
+        invitations: Number(count.invitations),
+        qrCodes: Number(count.qrCodes),
+        surveys: Number(count.surveys)
       })
     })
 

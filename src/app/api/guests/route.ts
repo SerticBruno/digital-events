@@ -52,11 +52,66 @@ export async function GET(request: NextRequest) {
       ORDER BY eg."createdAt" DESC
     `
 
+         // Get invitation data for all guests
+     const invitations = await prisma.$queryRaw<Array<{
+       guestId: string;
+       type: string;
+       status: string;
+       response?: string;
+       hasPlusOne: boolean;
+       plusOneName?: string;
+       plusOneEmail?: string;
+     }>>`
+       SELECT
+         i."guestId",
+         i.type,
+         i.status,
+         i.response,
+         i."hasPlusOne",
+         i."plusOneName",
+         i."plusOneEmail"
+       FROM invitations i
+       WHERE i."eventId" = ${eventId}
+     `
+
+    // Get QR codes for all guests
+    const qrCodes = await prisma.$queryRaw<Array<{
+      guestId: string;
+      code: string;
+      type: string;
+      isUsed: boolean;
+      usedAt?: string;
+    }>>`
+      SELECT
+        q."guestId",
+        q.code,
+        q.type,
+        q."isUsed",
+        q."usedAt"
+      FROM qr_codes q
+      WHERE q."eventId" = ${eventId}
+    `
+
+    // Create a map of guest ID to invitation
+    const invitationMap = new Map()
+    invitations.forEach(inv => {
+      invitationMap.set(inv.guestId, inv)
+    })
+
+    // Create a map of guest ID to QR codes
+    const qrCodeMap = new Map()
+    qrCodes.forEach(qr => {
+      if (!qrCodeMap.has(qr.guestId)) {
+        qrCodeMap.set(qr.guestId, [])
+      }
+      qrCodeMap.get(qr.guestId).push(qr)
+    })
+
     // Transform the raw query result to match expected format
     const guests = eventGuests.map(guest => ({
       ...guest,
-      invitations: [],
-      qrCodes: [],
+      invitations: invitationMap.has(guest.id) ? [invitationMap.get(guest.id)] : [],
+      qrCodes: qrCodeMap.has(guest.id) ? qrCodeMap.get(guest.id) : [],
       survey: undefined
     }))
 

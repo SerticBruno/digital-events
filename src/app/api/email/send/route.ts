@@ -5,8 +5,40 @@ import { prisma } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, guestIds, eventId, hasPlusOne, plusOneEmails, plusOneNames } = body
+    const { type, guestIds, eventId, hasPlusOne, plusOneEmails, plusOneNames, to, subject, html } = body
 
+    // Handle test emails (direct email sending)
+    if (to && subject && html) {
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+            to: [to],
+            html: html,
+          }),
+        })
+
+        if (!response.ok) {
+          const error = await response.text()
+          throw new Error(error)
+        }
+
+        return NextResponse.json({ success: true, message: 'Test email sent successfully' })
+      } catch (error) {
+        console.error('Failed to send test email:', error)
+        return NextResponse.json(
+          { error: `Failed to send test email: ${error}` },
+          { status: 500 }
+        )
+      }
+    }
+
+    // Handle regular guest emails
     if (!type || !guestIds || !Array.isArray(guestIds) || !eventId) {
       return NextResponse.json(
         { error: 'Type, guest IDs array, and event ID are required' },
@@ -51,6 +83,11 @@ export async function POST(request: NextRequest) {
             result = await sendSaveTheDate(guestId, eventId)
             break
           case 'invitation':
+            // Check if guest has plus-one enabled
+            const invitation = await prisma.invitation.findFirst({
+              where: { guestId, eventId }
+            })
+            const hasPlusOne = invitation?.hasPlusOne || false
             result = await sendInvitation(guestId, hasPlusOne, eventId)
             break
           case 'qr_code':
@@ -70,16 +107,34 @@ export async function POST(request: NextRequest) {
         }
 
         if (result.success) {
-          // Update invitation status in database
-          await prisma.invitation.create({
-            data: {
-              type: type.toUpperCase().replace('_', '') as string,
-              status: 'SENT',
-              sentAt: new Date(),
-              guestId,
-              eventId
-            }
+          // Update or create invitation status in database
+          let invitation = await prisma.invitation.findFirst({
+            where: { guestId, eventId }
           })
+
+          if (invitation) {
+            // Update existing invitation
+            await prisma.invitation.update({
+              where: { id: invitation.id },
+              data: {
+                type: type.toUpperCase().replace('_', '') as string,
+                status: 'SENT',
+                sentAt: new Date()
+              }
+            })
+          } else {
+            // Create new invitation
+            await prisma.invitation.create({
+              data: {
+                type: type.toUpperCase().replace('_', '') as string,
+                status: 'SENT',
+                sentAt: new Date(),
+                guestId,
+                eventId,
+                hasPlusOne: false
+              }
+            })
+          }
 
           results.push({ guestId, success: true, message: 'Email sent successfully' })
         } else {

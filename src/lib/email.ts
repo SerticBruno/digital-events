@@ -31,10 +31,18 @@ export async function sendTestEmail(to: string) {
 
 export async function sendEmail(data: EmailData) {
   try {
-    const response = await fetch('/api/email/send', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+              body: JSON.stringify({
+          from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+          to: [data.to],
+          subject: data.subject,
+          html: data.html,
+        }),
     })
 
     if (!response.ok) {
@@ -68,28 +76,47 @@ export async function sendSaveTheDate(guestId: string, eventId?: string) {
   const guest = guests[0]
 
   // Get event data using raw SQL
-  const eventGuests = await prisma.$queryRaw<Array<{
+  let eventGuests: Array<{
     eventId: string;
     eventName: string;
     eventDescription: string | null;
     eventDate: string;
     eventLocation: string | null;
     eventMaxGuests: number | null;
-  }>>`
-    SELECT 
-      e.id as eventId,
-      e.name as eventName,
-      e.description as eventDescription,
-      e.date as eventDate,
-      e.location as eventLocation,
-      e."maxGuests" as eventMaxGuests
-    FROM event_guests eg
-    JOIN events e ON eg.eventId = e.id
-    WHERE eg.guestId = ${guestId}
-    ${eventId ? `AND e.id = ${eventId}` : ''}
-    ORDER BY e.date ASC
-    LIMIT 1
-  `
+  }> = []
+
+  if (eventId) {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      AND e.id = ${eventId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  } else {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  }
 
   if (eventGuests.length === 0) throw new Error('Guest not found in any event')
   const eventData = eventGuests[0]
@@ -206,28 +233,47 @@ export async function sendInvitation(guestId: string, hasPlusOne: boolean = fals
   const guest = guests[0]
 
   // Get event data using raw SQL
-  const eventGuests = await prisma.$queryRaw<Array<{
+  let eventGuests: Array<{
     eventId: string;
     eventName: string;
     eventDescription: string | null;
     eventDate: string;
     eventLocation: string | null;
     eventMaxGuests: number | null;
-  }>>`
-    SELECT 
-      e.id as eventId,
-      e.name as eventName,
-      e.description as eventDescription,
-      e.date as eventDate,
-      e.location as eventLocation,
-      e."maxGuests" as eventMaxGuests
-    FROM event_guests eg
-    JOIN events e ON eg.eventId = e.id
-    WHERE eg.guestId = ${guestId}
-    ${eventId ? `AND e.id = ${eventId}` : ''}
-    ORDER BY e.date ASC
-    LIMIT 1
-  `
+  }> = []
+
+  if (eventId) {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      AND e.id = ${eventId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  } else {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  }
 
   if (eventGuests.length === 0) throw new Error('Guest not found in any event')
   const eventData = eventGuests[0]
@@ -252,12 +298,27 @@ export async function sendInvitation(guestId: string, hasPlusOne: boolean = fals
       <p><strong>Location:</strong> ${event.location || 'TBA'}</p>
       ${event.description ? `<p>${event.description}</p>` : ''}
       <div style="margin: 30px 0;">
-        <a href="${responseUrl}?response=coming" style="background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
-          ${hasPlusOne ? 'I\'m Coming with Guest' : 'I\'m Coming'}
+        <a href="${responseUrl}?response=coming" style="background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; margin-bottom: 10px;">
+          I'm Coming
         </a>
-        <a href="${responseUrl}?response=not_coming" style="background: #f44336; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
+        <a href="${responseUrl}?response=coming_with_plus_one" style="background: #2196F3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; margin-bottom: 10px;">
+          I'm Coming with Guest
+        </a>
+        <a href="${responseUrl}?response=not_coming" style="background: #f44336; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin-bottom: 10px;">
           I Can't Come
         </a>
+      </div>
+      <div style="background-color: #f0f8ff; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <p style="margin: 0; color: #1976d2; font-size: 14px;">
+          <strong>Plus-One Option:</strong> You can bring a guest with you to this event. 
+          Click "I'm Coming with Guest" above and we'll ask for your guest's email.
+        </p>
+      </div>
+      <div style="background-color: #f9f9f9; border: 1px solid #ddd; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <p style="margin: 0; color: #666; font-size: 14px;">
+          <strong>Entry Information:</strong> You will receive a QR code for entry. 
+          Please present this QR code at the event entrance. Each QR code can only be used once.
+        </p>
       </div>
       <p>Best regards,<br>Event Team</p>
     </div>
@@ -289,28 +350,47 @@ export async function sendQRCode(guestId: string, eventId?: string) {
   const guest = guests[0]
 
   // Get event data using raw SQL
-  const eventGuests = await prisma.$queryRaw<Array<{
+  let eventGuests: Array<{
     eventId: string;
     eventName: string;
     eventDescription: string | null;
     eventDate: string;
     eventLocation: string | null;
     eventMaxGuests: number | null;
-  }>>`
-    SELECT 
-      e.id as eventId,
-      e.name as eventName,
-      e.description as eventDescription,
-      e.date as eventDate,
-      e.location as eventLocation,
-      e."maxGuests" as eventMaxGuests
-    FROM event_guests eg
-    JOIN events e ON eg.eventId = e.id
-    WHERE eg.guestId = ${guestId}
-    ${eventId ? `AND e.id = ${eventId}` : ''}
-    ORDER BY e.date ASC
-    LIMIT 1
-  `
+  }> = []
+
+  if (eventId) {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      AND e.id = ${eventId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  } else {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  }
 
   if (eventGuests.length === 0) throw new Error('Guest not found in any event')
   const eventData = eventGuests[0]
@@ -325,16 +405,27 @@ export async function sendQRCode(guestId: string, eventId?: string) {
   }
 
   // Get QR codes using raw SQL
-  const qrCodes = await prisma.$queryRaw<Array<{
+  let qrCodes: Array<{
     code: string;
     isUsed: boolean;
-  }>>`
-    SELECT code, "isUsed"
-    FROM qr_codes
-    WHERE "guestId" = ${guestId}
-    ${eventId ? `AND "eventId" = ${eventId}` : ''}
-    AND "isUsed" = false
-  `
+  }> = []
+
+  if (eventId) {
+    qrCodes = await prisma.$queryRaw`
+      SELECT code, "isUsed"
+      FROM qr_codes
+      WHERE "guestId" = ${guestId}
+      AND "eventId" = ${eventId}
+      AND "isUsed" = false
+    `
+  } else {
+    qrCodes = await prisma.$queryRaw`
+      SELECT code, "isUsed"
+      FROM qr_codes
+      WHERE "guestId" = ${guestId}
+      AND "isUsed" = false
+    `
+  }
 
   if (qrCodes.length === 0) throw new Error('No QR codes available')
 
@@ -380,28 +471,47 @@ export async function sendPlusOneInvitation(guestId: string, plusOneEmail: strin
   const guest = guests[0]
 
   // Get event data using raw SQL
-  const eventGuests = await prisma.$queryRaw<Array<{
+  let eventGuests: Array<{
     eventId: string;
     eventName: string;
     eventDescription: string | null;
     eventDate: string;
     eventLocation: string | null;
     eventMaxGuests: number | null;
-  }>>`
-    SELECT 
-      e.id as eventId,
-      e.name as eventName,
-      e.description as eventDescription,
-      e.date as eventDate,
-      e.location as eventLocation,
-      e."maxGuests" as eventMaxGuests
-    FROM event_guests eg
-    JOIN events e ON eg.eventId = e.id
-    WHERE eg.guestId = ${guestId}
-    ${eventId ? `AND e.id = ${eventId}` : ''}
-    ORDER BY e.date ASC
-    LIMIT 1
-  `
+  }> = []
+
+  if (eventId) {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      AND e.id = ${eventId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  } else {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  }
 
   if (eventGuests.length === 0) throw new Error('Guest not found in any event')
   const eventData = eventGuests[0]
@@ -463,28 +573,47 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
   const guest = guests[0]
 
   // Get event data using raw SQL
-  const eventGuests = await prisma.$queryRaw<Array<{
+  let eventGuests: Array<{
     eventId: string;
     eventName: string;
     eventDescription: string | null;
     eventDate: string;
     eventLocation: string | null;
     eventMaxGuests: number | null;
-  }>>`
-    SELECT 
-      e.id as eventId,
-      e.name as eventName,
-      e.description as eventDescription,
-      e.date as eventDate,
-      e.location as eventLocation,
-      e."maxGuests" as eventMaxGuests
-    FROM event_guests eg
-    JOIN events e ON eg.eventId = e.id
-    WHERE eg.guestId = ${guestId}
-    ${eventId ? `AND e.id = ${eventId}` : ''}
-    ORDER BY e.date ASC
-    LIMIT 1
-  `
+  }> = []
+
+  if (eventId) {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      AND e.id = ${eventId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  } else {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  }
 
   if (eventGuests.length === 0) throw new Error('Guest not found in any event')
   const eventData = eventGuests[0]
@@ -499,17 +628,29 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
   }
 
   // Get QR codes using raw SQL
-  const qrCodes = await prisma.$queryRaw<Array<{
+  let qrCodes: Array<{
     code: string;
     isUsed: boolean;
-  }>>`
-    SELECT code, "isUsed"
-    FROM qr_codes
-    WHERE "guestId" = ${guestId}
-    ${eventId ? `AND "eventId" = ${eventId}` : ''}
-    AND "isUsed" = false
-    ORDER BY "createdAt" ASC
-  `
+  }> = []
+
+  if (eventId) {
+    qrCodes = await prisma.$queryRaw`
+      SELECT code, "isUsed"
+      FROM qr_codes
+      WHERE "guestId" = ${guestId}
+      AND "eventId" = ${eventId}
+      AND "isUsed" = false
+      ORDER BY "createdAt" ASC
+    `
+  } else {
+    qrCodes = await prisma.$queryRaw`
+      SELECT code, "isUsed"
+      FROM qr_codes
+      WHERE "guestId" = ${guestId}
+      AND "isUsed" = false
+      ORDER BY "createdAt" ASC
+    `
+  }
 
   if (qrCodes.length < 2) throw new Error('Plus-one QR code not available')
 
@@ -558,28 +699,47 @@ export async function sendSurvey(guestId: string, eventId?: string) {
   const guest = guests[0]
 
   // Get event data using raw SQL
-  const eventGuests = await prisma.$queryRaw<Array<{
+  let eventGuests: Array<{
     eventId: string;
     eventName: string;
     eventDescription: string | null;
     eventDate: string;
     eventLocation: string | null;
     eventMaxGuests: number | null;
-  }>>`
-    SELECT 
-      e.id as eventId,
-      e.name as eventName,
-      e.description as eventDescription,
-      e.date as eventDate,
-      e.location as eventLocation,
-      e."maxGuests" as eventMaxGuests
-    FROM event_guests eg
-    JOIN events e ON eg.eventId = e.id
-    WHERE eg.guestId = ${guestId}
-    ${eventId ? `AND e.id = ${eventId}` : ''}
-    ORDER BY e.date ASC
-    LIMIT 1
-  `
+  }> = []
+
+  if (eventId) {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      AND e.id = ${eventId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  } else {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg.eventId = e.id
+      WHERE eg.guestId = ${guestId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  }
 
   if (eventGuests.length === 0) throw new Error('Guest not found in any event')
   const eventData = eventGuests[0]
