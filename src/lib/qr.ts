@@ -1,4 +1,3 @@
-import QRCode from 'qrcode'
 import { prisma } from '@/lib/db'
 
 
@@ -41,7 +40,7 @@ export async function generateQRCode(guestId: string, eventId: string, type: 'RE
   }
 }
 
-export async function generateQRCodesForGuest(guestId: string, eventId: string, hasPlusOne: boolean = false, isVip: boolean = false) {
+export async function generateQRCodesForGuest(guestId: string, eventId: string, isVip: boolean = false) {
   const type = isVip ? 'VIP' : 'REGULAR'
   
   // Generate QR code for main guest (this will deactivate any existing active QR codes)

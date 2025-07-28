@@ -145,6 +145,15 @@ export async function POST(request: NextRequest) {
       VALUES (${randomUUID()}, ${eventId}, ${guest!.id}, datetime('now'))
     `
 
+    // Generate QR code for the new guest
+    try {
+      const { generateQRCode } = await import('@/lib/qr')
+      await generateQRCode(guest!.id, eventId, isVip ? 'VIP' : 'REGULAR')
+    } catch (error) {
+      console.error('Failed to generate QR code for new guest:', error)
+      // Don't fail the guest creation if QR code generation fails
+    }
+
     return NextResponse.json(guest, { status: 201 })
   } catch (error) {
     console.error('Failed to create guest:', error)

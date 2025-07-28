@@ -152,12 +152,6 @@ export default function Dashboard() {
       })
       
       if (response.ok) {
-        const guest = await response.json()
-        
-        // Automatically generate a QR code for the new guest
-        const { generateQRCode } = await import('@/lib/qr')
-        await generateQRCode(guest.id, selectedEvent.id, data.isVip ? 'VIP' : 'REGULAR')
-        
         await fetchGuests(selectedEvent.id)
         setShowGuestModal(false)
       } else {
@@ -180,18 +174,6 @@ export default function Dashboard() {
       })
       
       if (response.ok) {
-        const result = await response.json()
-        
-        // Generate QR codes for all newly added guests
-        const { generateQRCode } = await import('@/lib/qr')
-        for (const resultItem of result.results || []) {
-          if (resultItem.success) {
-            // Find the guest data to get VIP status
-            const guestData = guests.find(g => g.email === resultItem.email)
-            await generateQRCode(resultItem.id, selectedEvent.id, guestData?.isVip ? 'VIP' : 'REGULAR')
-          }
-        }
-        
         await fetchGuests(selectedEvent.id)
         setShowCSVModal(false)
       } else {
@@ -581,18 +563,33 @@ export default function Dashboard() {
 
     setSendingEmails(true)
     try {
-      const { generateQRCode } = await import('@/lib/qr')
+      const response = await fetch('/api/qr/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          guestIds, 
+          eventId: selectedEvent.id,
+          type: 'REGULAR'
+        })
+      })
       
-      for (const guestId of guestIds) {
-        const guest = guests.find(g => g.id === guestId)
-        if (guest) {
-          await generateQRCode(guestId, selectedEvent.id, guest.isVip ? 'VIP' : 'REGULAR')
+      const result = await response.json()
+      
+      if (response.ok) {
+        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        
+        let message = `Successfully generated QR codes for ${successCount} guests`
+        if (failureCount > 0) {
+          message += `, ${failureCount} failed`
         }
+        
+        alert(message)
+        await fetchGuests(selectedEvent.id)
+        clearSelection()
+      } else {
+        alert(`Error: ${result.error}`)
       }
-      
-      await fetchGuests(selectedEvent.id)
-      alert(`Successfully generated QR codes for ${guestIds.length} guests`)
-      clearSelection()
     } catch (error) {
       console.error('Failed to generate QR codes:', error)
       alert('Failed to generate QR codes')
@@ -606,18 +603,43 @@ export default function Dashboard() {
 
     setSendingEmails(true)
     try {
-      const { generateQRCode } = await import('@/lib/qr')
-      
       const guestsWithoutQRCodes = guests.filter(guest => 
         !guest.qrCodes || guest.qrCodes.length === 0
       )
       
-      for (const guest of guestsWithoutQRCodes) {
-        await generateQRCode(guest.id, selectedEvent.id, guest.isVip ? 'VIP' : 'REGULAR')
+      if (guestsWithoutQRCodes.length === 0) {
+        alert('All guests already have QR codes')
+        return
       }
       
-      await fetchGuests(selectedEvent.id)
-      alert(`Successfully generated QR codes for ${guestsWithoutQRCodes.length} guests`)
+      const guestIds = guestsWithoutQRCodes.map(g => g.id)
+      
+      const response = await fetch('/api/qr/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          guestIds, 
+          eventId: selectedEvent.id,
+          type: 'REGULAR'
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        
+        let message = `Successfully generated QR codes for ${successCount} guests`
+        if (failureCount > 0) {
+          message += `, ${failureCount} failed`
+        }
+        
+        alert(message)
+        await fetchGuests(selectedEvent.id)
+      } else {
+        alert(`Error: ${result.error}`)
+      }
     } catch (error) {
       console.error('Failed to regenerate QR codes:', error)
       alert('Failed to regenerate QR codes')
@@ -930,11 +952,11 @@ export default function Dashboard() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Invitation Sent
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Plus-One
-                      </th>
+                                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                           Plus-One
+                         </th>
                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                           QR Code
+                           QR Status
                          </th>
                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                            Actions
@@ -944,7 +966,7 @@ export default function Dashboard() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {guests.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
+                        <td colSpan={10} className="px-6 py-4 text-center text-gray-500">
                           No guests found for this event. Add some guests to get started.
                         </td>
                       </tr>
@@ -1013,42 +1035,29 @@ export default function Dashboard() {
                              'Not Sent'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => togglePlusOne(guest.id, guest.invitations[0]?.hasPlusOne || false)}
-                            disabled={updatingPlusOne}
-                            className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
-                              guest.invitations[0]?.hasPlusOne 
-                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                            }`}
-                          >
-                            {guest.invitations[0]?.hasPlusOne ? 'Enabled' : 'Disabled'}
-                          </button>
-                          
-                                                   </td>
-                           <td className="px-6 py-4 whitespace-nowrap">
-                             {guest.qrCodes && guest.qrCodes.length > 0 ? (
-                               <div className="space-y-1">
-                                 {guest.qrCodes.map((qr, index) => (
-                                   <div key={index} className="flex items-center space-x-2">
-                                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                       Active
-                                     </span>
-                                     <span className="text-xs text-gray-500 font-mono">
-                                       {qr.code.startsWith('data:') 
-                                         ? 'QR Code' 
-                                         : qr.code.split('_').pop()?.substring(0, 6) || qr.code.substring(0, 8)
-                                       }
-                                     </span>
-                                   </div>
-                                 ))}
-                               </div>
-                             ) : (
-                               <span className="text-xs text-gray-400">No Active QR Code</span>
-                             )}
-                           </td>
-                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                   <td className="px-6 py-4 whitespace-nowrap">
+                             <button
+                               onClick={() => togglePlusOne(guest.id, guest.invitations[0]?.hasPlusOne || false)}
+                               disabled={updatingPlusOne}
+                               className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                                 guest.invitations[0]?.hasPlusOne 
+                                   ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                   : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                               }`}
+                             >
+                                                                {guest.invitations[0]?.hasPlusOne ? 'Enabled' : 'Disabled'}
+                               </button>
+                             </td>
+                             <td className="px-6 py-4 whitespace-nowrap">
+                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                 guest.qrCodes && guest.qrCodes.length > 0
+                                   ? 'bg-green-100 text-green-800'
+                                   : 'bg-gray-100 text-gray-800'
+                               }`}>
+                                 {guest.qrCodes && guest.qrCodes.length > 0 ? 'Active' : 'Inactive'}
+                               </span>
+                             </td>
+                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <a
                             href={`/respond/${guest.id}?eventId=${selectedEvent?.id}`}
                             target="_blank"

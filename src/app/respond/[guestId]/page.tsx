@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { CheckCircle, XCircle, UserPlus, Calendar, MapPin, RefreshCw } from 'lucide-react'
+import { InvitationData } from '@/lib/types'
 
 interface Guest {
   id: string
@@ -40,7 +41,7 @@ export default function RespondPage() {
   const [error, setError] = useState<string | null>(null)
   const [plusOneEmail, setPlusOneEmail] = useState('')
   const [showPlusOneForm, setShowPlusOneForm] = useState(false)
-  const [invitation, setInvitation] = useState<any>(null)
+  const [invitation, setInvitation] = useState<InvitationData | null>(null)
 
   useEffect(() => {
     if (guestId) {
