@@ -22,7 +22,7 @@ export default function QRScanner() {
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState<QRScanResult | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<string>('')
-  const [events, setEvents] = useState<any[]>([])
+  const [events, setEvents] = useState<Array<{ id: string; name: string; date: string; location?: string }>>([])
   const [cameraError, setCameraError] = useState<string>('')
   const [lastScannedCode, setLastScannedCode] = useState<string>('')
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -370,19 +370,19 @@ export default function QRScanner() {
                 <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
                   1
                 </div>
-                <p>Select the event you're scanning for from the dropdown above</p>
+                <p>Select the event you&apos;re scanning for from the dropdown above</p>
               </div>
               <div className="flex items-start">
                 <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
                   2
                 </div>
-                <p>Click "Start Scanning" to activate the camera</p>
+                <p>Click &ldquo;Start Scanning&rdquo; to activate the camera</p>
               </div>
               <div className="flex items-start">
                 <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
                   3
                 </div>
-                <p>Point the camera at the guest's QR code within the blue frame</p>
+                <p>Point the camera at the guest&apos;s QR code within the blue frame</p>
               </div>
               <div className="flex items-start">
                 <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
@@ -394,7 +394,7 @@ export default function QRScanner() {
                 <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
                   5
                 </div>
-                <p>If camera doesn't work, use "Manual Input" to enter the QR code manually</p>
+                <p>If camera doesn&apos;t work, use &ldquo;Manual Input&rdquo; to enter the QR code manually</p>
               </div>
             </div>
           </div>

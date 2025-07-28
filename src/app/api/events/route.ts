@@ -3,26 +3,49 @@ import { prisma } from '@/lib/db'
 
 export async function GET() {
   try {
-    const events = await (prisma as any).event.findMany({
-      include: {
-        _count: {
-          select: {
-            eventGuests: true,
-            invitations: true,
-            qrCodes: true,
-            surveys: true
-          }
-        }
-      },
+    const events = await prisma.event.findMany({
       orderBy: { date: 'desc' }
     })
 
+    // Get counts for each event using raw SQL
+    const eventCounts = await prisma.$queryRaw<Array<{
+      eventId: string;
+      eventGuests: number;
+      invitations: number;
+      qrCodes: number;
+      surveys: number;
+    }>>`
+      SELECT 
+        e.id as eventId,
+        COUNT(DISTINCT eg.id) as eventGuests,
+        COUNT(DISTINCT i.id) as invitations,
+        COUNT(DISTINCT q.id) as qrCodes,
+        COUNT(DISTINCT s.id) as surveys
+      FROM events e
+      LEFT JOIN event_guests eg ON e.id = eg.eventId
+      LEFT JOIN invitations i ON e.id = i.eventId
+      LEFT JOIN qr_codes q ON e.id = q.eventId
+      LEFT JOIN surveys s ON e.id = s.eventId
+      GROUP BY e.id
+    `
+
+    // Create a map of event ID to counts
+    const countMap = new Map<string, { eventGuests: number; invitations: number; qrCodes: number; surveys: number }>()
+    eventCounts.forEach(count => {
+      countMap.set(count.eventId, {
+        eventGuests: count.eventGuests,
+        invitations: count.invitations,
+        qrCodes: count.qrCodes,
+        surveys: count.surveys
+      })
+    })
+
     // Transform the data to match the expected format
-    const transformedEvents = events.map((event: any) => ({
+    const transformedEvents = events.map(event => ({
       ...event,
       _count: {
-        ...event._count,
-        guests: event._count.eventGuests // Map eventGuests count to guests count
+        ...countMap.get(event.id),
+        guests: countMap.get(event.id)?.eventGuests || 0 // Map eventGuests count to guests count
       }
     }))
 

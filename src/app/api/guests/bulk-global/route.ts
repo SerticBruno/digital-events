@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { randomUUID } from 'crypto'
+
+interface GuestData {
+  firstName: string
+  lastName: string
+  email: string
+  company?: string
+  position?: string
+  phone?: string
+  isVip?: boolean
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,35 +27,41 @@ export async function POST(request: NextRequest) {
     const results = []
     const errors = []
 
-    for (const guestData of guests) {
+    for (const guestData of guests as GuestData[]) {
       try {
         // Check if guest already exists globally
-        let guest = await (prisma as any).guest.findUnique({
+        let guest = await prisma.guest.findUnique({
           where: { email: guestData.email }
         })
 
         if (!guest) {
-          // Create new guest
-          guest = await (prisma as any).guest.create({
-            data: {
-              firstName: guestData.firstName,
-              lastName: guestData.lastName,
-              email: guestData.email,
-              company: guestData.company || null,
-              position: guestData.position || null,
-              phone: guestData.phone || null,
-              isVip: guestData.isVip || false
-            }
-          })
+          // Create new guest using raw SQL
+          const guestId = randomUUID()
+          await prisma.$executeRaw`
+            INSERT INTO guests (id, email, firstName, lastName, company, position, phone, isVip, createdAt, updatedAt)
+            VALUES (${guestId}, ${guestData.email}, ${guestData.firstName}, ${guestData.lastName}, ${guestData.company || null}, ${guestData.position || null}, ${guestData.phone || null}, ${guestData.isVip || false}, datetime('now'), datetime('now'))
+          `
+          guest = {
+            id: guestId,
+            email: guestData.email,
+            firstName: guestData.firstName,
+            lastName: guestData.lastName,
+            company: guestData.company || null,
+            position: guestData.position || null,
+            phone: guestData.phone || null,
+            isVip: guestData.isVip || false,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          } as unknown as { id: string; email: string; firstName: string; lastName: string; company: string | null; position: string | null; phone: string | null; isVip: boolean; createdAt: Date; updatedAt: Date; eventId: string }
         }
 
         results.push({
-          id: guest.id,
-          email: guest.email,
+          id: guest!.id,
+          email: guest!.email,
           success: true,
           action: guest ? 'created' : 'already_exists'
         })
-      } catch (error) {
+      } catch {
         errors.push({
           email: guestData.email,
           error: 'Failed to create guest'

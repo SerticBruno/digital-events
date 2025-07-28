@@ -27,7 +27,7 @@ interface GuestFormProps {
   isGlobal?: boolean
 }
 
-export default function GuestForm({ eventId, onSubmit, initialData, isLoading = false, isGlobal = false }: GuestFormProps) {
+export default function GuestForm({ onSubmit, initialData, isLoading = false }: GuestFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   const {

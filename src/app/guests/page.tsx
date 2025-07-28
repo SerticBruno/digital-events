@@ -66,7 +66,7 @@ export default function GuestsPage() {
     }
   }
 
-  const addGuest = async (data: any) => {
+  const addGuest = async (data: { firstName: string; lastName: string; email: string; company?: string; position?: string; phone?: string; isVip: boolean }) => {
     try {
       // Create guest without event (global guest)
       const response = await fetch('/api/guests/global', {
@@ -87,7 +87,7 @@ export default function GuestsPage() {
     }
   }
 
-  const bulkUploadGuests = async (guestsData: any[]) => {
+  const bulkUploadGuests = async (guestsData: Array<{ firstName: string; lastName: string; email: string; company?: string; position?: string; phone?: string; isVip: boolean }>) => {
     try {
       const response = await fetch('/api/guests/bulk-global', {
         method: 'POST',
@@ -288,7 +288,7 @@ export default function GuestsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {guest.eventGuests && guest.eventGuests.length > 0 ? (
                           <div>
-                            {guest.eventGuests.map((eg, index) => (
+                            {guest.eventGuests.map((eg) => (
                               <span key={eg.event.id} className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs mr-1 mb-1">
                                 {eg.event.name}
                               </span>

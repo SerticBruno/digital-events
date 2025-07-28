@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Search, User, Mail, Building, Plus, X } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Search, User, Mail, Building, X } from 'lucide-react'
 import { getInputClasses, getButtonClasses, componentStyles } from '@/lib/design-system'
 
 interface Guest {
@@ -32,7 +32,7 @@ export default function AddExistingGuest({ eventId, onGuestAdded, onClose }: Add
   const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set())
   const [isAdding, setIsAdding] = useState(false)
 
-  const searchGuests = async () => {
+  const searchGuests = useCallback(async () => {
     if (!searchTerm.trim()) {
       // If no search term, show all guests
       setIsSearching(true)
@@ -62,7 +62,7 @@ export default function AddExistingGuest({ eventId, onGuestAdded, onClose }: Add
     } finally {
       setIsSearching(false)
     }
-  }
+  }, [searchTerm])
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -70,12 +70,12 @@ export default function AddExistingGuest({ eventId, onGuestAdded, onClose }: Add
     }, 300)
 
     return () => clearTimeout(timeoutId)
-  }, [searchTerm])
+  }, [searchTerm, searchGuests])
 
   // Load all guests when component mounts
   useEffect(() => {
     searchGuests()
-  }, [])
+  }, [searchGuests])
 
   const toggleGuestSelection = (guestId: string) => {
     const newSelected = new Set(selectedGuests)
@@ -253,7 +253,7 @@ export default function AddExistingGuest({ eventId, onGuestAdded, onClose }: Add
               <div className="text-center py-8">
                 <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600">No guests found in database</p>
-                <p className="text-sm text-gray-500 mt-2">Add some guests first using the "Add Guest" button</p>
+                <p className="text-sm text-gray-500 mt-2">Add some guests first using the &quot;Add Guest&quot; button</p>
               </div>
             )}
 

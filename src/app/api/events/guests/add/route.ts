@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check which guests are already in the event
-    const existingEventGuests = await (prisma as any).eventGuest.findMany({
+    const existingEventGuests = await prisma.eventGuest.findMany({
       where: {
         guestId: { in: guestIds },
         eventId: eventId
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       select: { guestId: true }
     })
 
-    const existingGuestIds = existingEventGuests.map((g: any) => g.guestId)
+    const existingGuestIds = existingEventGuests.map((g: { guestId: string }) => g.guestId)
     const newGuestIds = guestIds.filter(id => !existingGuestIds.includes(id))
 
     if (newGuestIds.length === 0) {
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       guestId
     }))
 
-    await (prisma as any).eventGuest.createMany({
+    await prisma.eventGuest.createMany({
       data: eventGuestRecords
     })
 

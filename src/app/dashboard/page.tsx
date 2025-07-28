@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User } from 'lucide-react'
+import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User } from 'lucide-react'
 import EventForm from '@/components/EventForm'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
@@ -44,6 +44,8 @@ export default function Dashboard() {
   const [showGuestModal, setShowGuestModal] = useState(false)
   const [showCSVModal, setShowCSVModal] = useState(false)
   const [showExistingGuestModal, setShowExistingGuestModal] = useState(false)
+  const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set())
+  const [sendingEmails, setSendingEmails] = useState(false)
 
   useEffect(() => {
     fetchEvents()
@@ -89,7 +91,7 @@ export default function Dashboard() {
     }
   }
 
-  const createEvent = async (data: any) => {
+  const createEvent = async (data: { name: string; date: string; location?: string; description?: string }) => {
     try {
       const response = await fetch('/api/events', {
         method: 'POST',
@@ -109,7 +111,7 @@ export default function Dashboard() {
     }
   }
 
-  const addGuest = async (data: any) => {
+  const addGuest = async (data: { firstName: string; lastName: string; email: string; company?: string; position?: string; phone?: string; isVip: boolean }) => {
     if (!selectedEvent) return
     
     try {
@@ -131,7 +133,7 @@ export default function Dashboard() {
     }
   }
 
-  const bulkUploadGuests = async (guests: any[]) => {
+  const bulkUploadGuests = async (guests: Array<{ firstName: string; lastName: string; email: string; company?: string; position?: string; phone?: string; isVip: boolean }>) => {
     if (!selectedEvent) return
     
     try {
@@ -153,12 +155,59 @@ export default function Dashboard() {
     }
   }
 
+  const toggleGuestSelection = (guestId: string) => {
+    const newSelected = new Set(selectedGuests)
+    if (newSelected.has(guestId)) {
+      newSelected.delete(guestId)
+    } else {
+      newSelected.add(guestId)
+    }
+    setSelectedGuests(newSelected)
+  }
+
+  const selectAllGuests = () => {
+    setSelectedGuests(new Set(guests.map(g => g.id)))
+  }
+
+  const clearSelection = () => {
+    setSelectedGuests(new Set())
+  }
+
+  const testEmail = async () => {
+    const testEmail = prompt('Enter email address for testing (use budasevo.trouts@gmail.com for testing):')
+    if (!testEmail) return
+
+    try {
+      const response = await fetch('/api/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail })
+      })
+      const result = await response.json()
+      
+      if (response.ok) {
+        alert('Test email sent successfully! Check your inbox.')
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to send test email:', error)
+      alert('Failed to send test email')
+    }
+  }
+
   const sendEmails = async (type: string, guestIds: string[]) => {
     if (!selectedEvent) {
       alert('Please select an event first')
       return
     }
 
+    if (guestIds.length === 0) {
+      alert('Please select at least one guest')
+      return
+    }
+
+    setSendingEmails(true)
     try {
       const response = await fetch('/api/email/send', {
         method: 'POST',
@@ -166,13 +215,174 @@ export default function Dashboard() {
         body: JSON.stringify({ type, guestIds, eventId: selectedEvent.id })
       })
       const result = await response.json()
-      alert(result.message)
-      if (selectedEvent) {
-        fetchGuests(selectedEvent.id)
+      
+      if (response.ok) {
+        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        
+        let message = `Successfully sent ${successCount} emails`
+        if (failureCount > 0) {
+          message += `, ${failureCount} failed`
+        }
+        
+        console.log('Email sending results:', result.results)
+        alert(message)
+        clearSelection()
+        if (selectedEvent) {
+          fetchGuests(selectedEvent.id)
+        }
+      } else {
+        alert(`Error: ${result.error}`)
       }
     } catch (error) {
       console.error('Failed to send emails:', error)
       alert('Failed to send emails')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
+  const sendPlusOneInvitations = async (guestIds: string[]) => {
+    if (!selectedEvent) {
+      alert('Please select an event first')
+      return
+    }
+
+    if (guestIds.length === 0) {
+      alert('Please select at least one guest')
+      return
+    }
+
+    // Prompt for plus-one information
+    const plusOneEmails: string[] = []
+    const plusOneNames: string[] = []
+
+    for (const guestId of guestIds) {
+      const guest = guests.find(g => g.id === guestId)
+      if (!guest) continue
+
+      const plusOneEmail = prompt(`Enter plus-one email for ${guest.firstName} ${guest.lastName}:`)
+      const plusOneName = prompt(`Enter plus-one name for ${guest.firstName} ${guest.lastName}:`)
+      
+      if (plusOneEmail && plusOneName) {
+        plusOneEmails.push(plusOneEmail)
+        plusOneNames.push(plusOneName)
+      } else {
+        alert('Plus-one email and name are required')
+        return
+      }
+    }
+
+    setSendingEmails(true)
+    try {
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          type: 'plus_one_invitation', 
+          guestIds, 
+          eventId: selectedEvent.id,
+          plusOneEmails,
+          plusOneNames
+        })
+      })
+      const result = await response.json()
+      
+      if (response.ok) {
+        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        
+        let message = `Successfully sent ${successCount} plus-one invitations`
+        if (failureCount > 0) {
+          message += `, ${failureCount} failed`
+        }
+        
+        console.log('Plus-one invitation results:', result.results)
+        alert(message)
+        clearSelection()
+        if (selectedEvent) {
+          fetchGuests(selectedEvent.id)
+        }
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to send plus-one invitations:', error)
+      alert('Failed to send plus-one invitations')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
+  const sendPlusOneQRCodes = async (guestIds: string[]) => {
+    if (!selectedEvent) {
+      alert('Please select an event first')
+      return
+    }
+
+    if (guestIds.length === 0) {
+      alert('Please select at least one guest')
+      return
+    }
+
+    // Prompt for plus-one information
+    const plusOneEmails: string[] = []
+    const plusOneNames: string[] = []
+
+    for (const guestId of guestIds) {
+      const guest = guests.find(g => g.id === guestId)
+      if (!guest) continue
+
+      const plusOneEmail = prompt(`Enter plus-one email for ${guest.firstName} ${guest.lastName}:`)
+      const plusOneName = prompt(`Enter plus-one name for ${guest.firstName} ${guest.lastName}:`)
+      
+      if (plusOneEmail && plusOneName) {
+        plusOneEmails.push(plusOneEmail)
+        plusOneNames.push(plusOneName)
+      } else {
+        alert('Plus-one email and name are required')
+        return
+      }
+    }
+
+    setSendingEmails(true)
+    try {
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          type: 'plus_one_qr_code', 
+          guestIds, 
+          eventId: selectedEvent.id,
+          plusOneEmails,
+          plusOneNames
+        })
+      })
+      const result = await response.json()
+      
+      if (response.ok) {
+        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        
+        let message = `Successfully sent ${successCount} plus-one QR codes`
+        if (failureCount > 0) {
+          message += `, ${failureCount} failed`
+        }
+        
+        console.log('Plus-one QR code results:', result.results)
+        alert(message)
+        clearSelection()
+        if (selectedEvent) {
+          fetchGuests(selectedEvent.id)
+        }
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to send plus-one QR codes:', error)
+      alert('Failed to send plus-one QR codes')
+    } finally {
+      setSendingEmails(false)
     }
   }
 
@@ -323,31 +533,78 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className={componentStyles.card.content}>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">
+                      {selectedGuests.size} of {guests.length} guests selected
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={selectAllGuests}
+                        className="text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        onClick={clearSelection}
+                        className="text-sm text-gray-600 hover:text-gray-800"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 <div className="flex flex-wrap gap-4">
                   <button
-                    onClick={() => sendEmails('save_the_date', guests.map(g => g.id))}
+                    onClick={() => sendEmails('save_the_date', Array.from(selectedGuests))}
+                    disabled={selectedGuests.size === 0 || sendingEmails}
                     className={getButtonClasses('primary')}
                   >
                     <Send className="w-4 h-4" />
-                    Send Save the Date
+                    {sendingEmails ? 'Sending...' : `Send Save the Date (${selectedGuests.size})`}
                   </button>
                   <button
-                    onClick={() => sendEmails('invitation', guests.map(g => g.id))}
+                    onClick={() => sendEmails('invitation', Array.from(selectedGuests))}
+                    disabled={selectedGuests.size === 0 || sendingEmails}
                     className={getButtonClasses('success')}
                   >
                     <Send className="w-4 h-4" />
-                    Send Invitations
+                    {sendingEmails ? 'Sending...' : `Send Invitations (${selectedGuests.size})`}
                   </button>
                   <button
-                    onClick={() => sendEmails('qr_code', guests.map(g => g.id))}
+                    onClick={() => sendEmails('qr_code', Array.from(selectedGuests))}
+                    disabled={selectedGuests.size === 0 || sendingEmails}
                     className={getButtonClasses('warning')}
                   >
                     <QrCode className="w-4 h-4" />
-                    Send QR Codes
+                    {sendingEmails ? 'Sending...' : `Send QR Codes (${selectedGuests.size})`}
+                  </button>
+                  <button
+                    onClick={() => sendPlusOneInvitations(Array.from(selectedGuests))}
+                    disabled={selectedGuests.size === 0 || sendingEmails}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                    {sendingEmails ? 'Sending...' : `Send Plus-One Invitations (${selectedGuests.size})`}
+                  </button>
+                  <button
+                    onClick={() => sendPlusOneQRCodes(Array.from(selectedGuests))}
+                    disabled={selectedGuests.size === 0 || sendingEmails}
+                    className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    {sendingEmails ? 'Sending...' : `Send Plus-One QR Codes (${selectedGuests.size})`}
                   </button>
                   <button className={getButtonClasses('secondary')}>
                     <Download className="w-4 h-4" />
                     Export Guest List
+                  </button>
+                  <button
+                    onClick={testEmail}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                    Test Email
                   </button>
                 </div>
               </div>
@@ -362,6 +619,14 @@ export default function Dashboard() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <input
+                          type="checkbox"
+                          checked={selectedGuests.size === guests.length && guests.length > 0}
+                          onChange={() => selectedGuests.size === guests.length ? clearSelection() : selectAllGuests()}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Guest
                       </th>
@@ -381,7 +646,15 @@ export default function Dashboard() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {guests.map((guest) => (
-                      <tr key={guest.id}>
+                      <tr key={guest.id} className={selectedGuests.has(guest.id) ? 'bg-blue-50' : ''}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedGuests.has(guest.id)}
+                            onChange={() => toggleGuestSelection(guest.id)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
                             <div className="text-sm font-medium text-gray-900">

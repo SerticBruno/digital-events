@@ -1,5 +1,7 @@
 import QRCode from 'qrcode'
-import { prisma } from './db'
+import { prisma } from '@/lib/db'
+
+
 
 export async function generateQRCode(guestId: string, eventId: string, type: 'REGULAR' | 'VIP' = 'REGULAR') {
   try {
@@ -16,15 +18,22 @@ export async function generateQRCode(guestId: string, eventId: string, type: 'RE
       }
     })
 
-    // Store in database
-    const qrCode = await (prisma as any).qRCode.create({
-      data: {
-        code: qrDataUrl,
-        type,
-        guestId,
-        eventId
-      }
-    })
+    // Store in database using raw SQL
+    const qrCodeId = crypto.randomUUID()
+    await prisma.$executeRaw`
+      INSERT INTO qr_codes (id, code, type, "guestId", "eventId", "isUsed", "createdAt")
+      VALUES (${qrCodeId}, ${qrDataUrl}, ${type}, ${guestId}, ${eventId}, false, datetime('now'))
+    `
+
+    const qrCode = {
+      id: qrCodeId,
+      code: qrDataUrl,
+      type,
+      guestId,
+      eventId,
+      isUsed: false,
+      createdAt: new Date()
+    }
 
     return qrCode
   } catch (error) {
@@ -50,36 +59,95 @@ export async function generateQRCodesForGuest(guestId: string, eventId: string, 
 
 export async function validateQRCode(code: string) {
   try {
-    const qrCode = await (prisma as any).qRCode.findFirst({
-      where: { code },
-      include: {
-        guest: {
-          include: { 
-            eventGuests: {
-              include: {
-                event: true
-              }
-            }
-          }
-        }
-      }
-    })
+    // Get QR code and guest data using raw SQL
+    const qrCodes = await prisma.$queryRaw<Array<{
+      id: string;
+      code: string;
+      type: string;
+      isUsed: boolean;
+      usedAt: string | null;
+      createdAt: string;
+      guestId: string;
+      eventId: string;
+      guestFirstName: string;
+      guestLastName: string;
+      guestEmail: string;
+      guestCompany: string | null;
+      guestIsVip: boolean;
+      eventName: string;
+      eventDescription: string | null;
+      eventDate: string;
+      eventLocation: string | null;
+      eventMaxGuests: number | null;
+    }>>`
+      SELECT 
+        qc.id,
+        qc.code,
+        qc.type,
+        qc."isUsed",
+        qc."usedAt",
+        qc."createdAt",
+        qc."guestId",
+        qc."eventId",
+        g."firstName" as guestFirstName,
+        g."lastName" as guestLastName,
+        g.email as guestEmail,
+        g.company as guestCompany,
+        g."isVip" as guestIsVip,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM qr_codes qc
+      JOIN guests g ON qc."guestId" = g.id
+      JOIN events e ON qc."eventId" = e.id
+      WHERE qc.code = ${code}
+    `
 
-    if (!qrCode) {
+    if (qrCodes.length === 0) {
       return { valid: false, error: 'Invalid QR code' }
     }
 
-    if (qrCode.isUsed) {
+    const qrCodeData = qrCodes[0]
+
+    if (qrCodeData.isUsed) {
       return { valid: false, error: 'QR code already used' }
     }
 
-    // Get the first event (or you could pass eventId as parameter)
-    const event = qrCode.guest.eventGuests[0]?.event
+    const qrCode = {
+      id: qrCodeData.id,
+      code: qrCodeData.code,
+      type: qrCodeData.type,
+      isUsed: qrCodeData.isUsed,
+      usedAt: qrCodeData.usedAt ? new Date(qrCodeData.usedAt) : undefined,
+      createdAt: new Date(qrCodeData.createdAt),
+      guestId: qrCodeData.guestId,
+      eventId: qrCodeData.eventId
+    }
+
+    const guest = {
+      id: qrCodeData.guestId,
+      firstName: qrCodeData.guestFirstName,
+      lastName: qrCodeData.guestLastName,
+      email: qrCodeData.guestEmail,
+      company: qrCodeData.guestCompany,
+      isVip: qrCodeData.guestIsVip
+    }
+
+    const event = {
+      id: qrCodeData.eventId,
+      name: qrCodeData.eventName,
+      description: qrCodeData.eventDescription,
+      date: new Date(qrCodeData.eventDate),
+      location: qrCodeData.eventLocation,
+      maxGuests: qrCodeData.eventMaxGuests
+    }
 
     return { 
       valid: true, 
       qrCode,
-      guest: qrCode.guest,
+      guest,
       event
     }
   } catch (error) {
@@ -90,26 +158,20 @@ export async function validateQRCode(code: string) {
 
 export async function useQRCode(code: string) {
   try {
-    const qrCode = await (prisma as any).qRCode.update({
-      where: { code },
-      data: {
-        isUsed: true,
-        usedAt: new Date()
-      },
-      include: {
-        guest: {
-          include: { 
-            eventGuests: {
-              include: {
-                event: true
-              }
-            }
-          }
-        }
-      }
-    })
+    // Update QR code using raw SQL
+    await prisma.$executeRaw`
+      UPDATE qr_codes 
+      SET "isUsed" = true, "usedAt" = datetime('now')
+      WHERE code = ${code}
+    `
 
-    return { success: true, qrCode }
+    // Get updated QR code data
+    const result = await validateQRCode(code)
+    if (!result.valid) {
+      return { success: false, error: 'QR code not found' }
+    }
+
+    return { success: true, qrCode: result.qrCode }
   } catch (error) {
     console.error('QR code usage failed:', error)
     return { success: false, error }

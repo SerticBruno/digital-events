@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { Upload, Download, AlertCircle, CheckCircle } from 'lucide-react'
-import { getButtonClasses, componentStyles } from '@/lib/design-system'
+import { getButtonClasses } from '@/lib/design-system'
 
 interface CSVUploadProps {
   eventId?: string
-  onUpload: (guests: any[]) => Promise<void>
+  onUpload: (guests: Array<{ firstName: string; lastName: string; email: string; company?: string; position?: string; phone?: string; isVip: boolean }>) => Promise<void>
   isGlobal?: boolean
 }
 
@@ -17,10 +17,10 @@ interface CSVRow {
   company?: string
   position?: string
   phone?: string
-  isVip?: boolean
+  isVip: boolean
 }
 
-export default function CSVUpload({ eventId, onUpload, isGlobal = false }: CSVUploadProps) {
+export default function CSVUpload({ onUpload }: CSVUploadProps) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<CSVRow[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -53,20 +53,20 @@ export default function CSVUpload({ eventId, onUpload, isGlobal = false }: CSVUp
       for (let i = 1; i < lines.length; i++) {
         if (lines[i].trim()) {
           const values = lines[i].split(',').map(v => v.trim())
-          const row: any = {}
+          const row: Partial<CSVRow> = {}
           
           headers.forEach((header, index) => {
             if (values[index]) {
               if (header === 'isvip') {
                 row.isVip = values[index].toLowerCase() === 'true' || values[index] === '1'
-              } else {
-                row[header] = values[index]
+              } else if (header in row) {
+                (row as Record<string, string>)[header] = values[index]
               }
             }
           })
           
           if (row.firstName && row.lastName && row.email) {
-            data.push(row)
+            data.push(row as CSVRow)
           }
         }
       }
@@ -93,21 +93,21 @@ export default function CSVUpload({ eventId, onUpload, isGlobal = false }: CSVUp
         const guests: CSVRow[] = []
         for (let i = 1; i < lines.length; i++) {
           if (lines[i].trim()) {
-            const values = lines[i].split(',').map(v => v.trim())
-            const row: any = {}
+                      const values = lines[i].split(',').map(v => v.trim())
+            const row: Partial<CSVRow> = {}
             
             headers.forEach((header, index) => {
               if (values[index]) {
                 if (header === 'isvip') {
                   row.isVip = values[index].toLowerCase() === 'true' || values[index] === '1'
-                } else {
-                  row[header] = values[index]
+                } else if (header in row) {
+                  (row as Record<string, string>)[header] = values[index]
                 }
               }
             })
             
             if (row.firstName && row.lastName && row.email) {
-              guests.push(row)
+              guests.push(row as CSVRow)
             }
           }
         }
@@ -118,7 +118,7 @@ export default function CSVUpload({ eventId, onUpload, isGlobal = false }: CSVUp
         setPreview([])
       }
       reader.readAsText(file)
-    } catch (error) {
+    } catch {
       setError('Failed to upload CSV file')
     } finally {
       setIsUploading(false)

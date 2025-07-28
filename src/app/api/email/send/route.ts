@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sendSaveTheDate, sendInvitation, sendQRCode, sendSurvey } from '@/lib/email'
+import { sendSaveTheDate, sendInvitation, sendQRCode, sendSurvey, sendPlusOneInvitation, sendPlusOneQRCode } from '@/lib/email'
 import { prisma } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, guestIds, eventId, hasPlusOne } = body
+    const { type, guestIds, eventId, hasPlusOne, plusOneEmails, plusOneNames } = body
 
     if (!type || !guestIds || !Array.isArray(guestIds) || !eventId) {
       return NextResponse.json(
@@ -14,10 +14,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate plus-one data if sending plus-one invitations
+    if (type === 'plus_one_invitation' || type === 'plus_one_qr_code') {
+      if (!plusOneEmails || !Array.isArray(plusOneEmails) || !plusOneNames || !Array.isArray(plusOneNames)) {
+        return NextResponse.json(
+          { error: 'Plus-one emails and names arrays are required for plus-one invitations' },
+          { status: 400 }
+        )
+      }
+      if (plusOneEmails.length !== guestIds.length || plusOneNames.length !== guestIds.length) {
+        return NextResponse.json(
+          { error: 'Plus-one emails and names arrays must match the number of guest IDs' },
+          { status: 400 }
+        )
+      }
+    }
+
     const results = []
 
-    for (const guestId of guestIds) {
+    // Add delay between requests to avoid rate limiting
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+    for (let i = 0; i < guestIds.length; i++) {
+      const guestId = guestIds[i]
+      
       try {
+        // Add delay between requests (500ms = 2 requests per second)
+        if (i > 0) {
+          await delay(500)
+        }
+
         let result
 
         switch (type) {
@@ -30,6 +56,12 @@ export async function POST(request: NextRequest) {
           case 'qr_code':
             result = await sendQRCode(guestId, eventId)
             break
+          case 'plus_one_invitation':
+            result = await sendPlusOneInvitation(guestId, plusOneEmails[i], plusOneNames[i], eventId)
+            break
+          case 'plus_one_qr_code':
+            result = await sendPlusOneQRCode(guestId, plusOneEmails[i], plusOneNames[i], eventId)
+            break
           case 'survey':
             result = await sendSurvey(guestId, eventId)
             break
@@ -39,9 +71,9 @@ export async function POST(request: NextRequest) {
 
         if (result.success) {
           // Update invitation status in database
-          await (prisma as any).invitation.create({
+          await prisma.invitation.create({
             data: {
-              type: type.toUpperCase().replace('_', '') as any,
+              type: type.toUpperCase().replace('_', '') as string,
               status: 'SENT',
               sentAt: new Date(),
               guestId,
@@ -49,8 +81,9 @@ export async function POST(request: NextRequest) {
             }
           })
 
-          results.push({ guestId, success: true })
+          results.push({ guestId, success: true, message: 'Email sent successfully' })
         } else {
+          console.error(`Failed to send email to guest ${guestId}:`, result.error)
           results.push({ guestId, success: false, error: result.error })
         }
       } catch (error) {
