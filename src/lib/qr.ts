@@ -1,7 +1,7 @@
 import QRCode from 'qrcode'
 import { prisma } from './db'
 
-export async function generateQRCode(guestId: string, type: 'REGULAR' | 'VIP' = 'REGULAR') {
+export async function generateQRCode(guestId: string, eventId: string, type: 'REGULAR' | 'VIP' = 'REGULAR') {
   try {
     // Generate a unique code
     const code = `${guestId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -17,11 +17,12 @@ export async function generateQRCode(guestId: string, type: 'REGULAR' | 'VIP' = 
     })
 
     // Store in database
-    const qrCode = await prisma.qRCode.create({
+    const qrCode = await (prisma as any).qRCode.create({
       data: {
         code: qrDataUrl,
         type,
-        guestId
+        guestId,
+        eventId
       }
     })
 
@@ -32,16 +33,16 @@ export async function generateQRCode(guestId: string, type: 'REGULAR' | 'VIP' = 
   }
 }
 
-export async function generateQRCodesForGuest(guestId: string, hasPlusOne: boolean = false, isVip: boolean = false) {
+export async function generateQRCodesForGuest(guestId: string, eventId: string, hasPlusOne: boolean = false, isVip: boolean = false) {
   const type = isVip ? 'VIP' : 'REGULAR'
   
   // Generate QR code for main guest
-  const mainQR = await generateQRCode(guestId, type)
+  const mainQR = await generateQRCode(guestId, eventId, type)
   
   // Generate QR code for plus one if needed
   let plusOneQR = null
   if (hasPlusOne) {
-    plusOneQR = await generateQRCode(guestId, type)
+    plusOneQR = await generateQRCode(guestId, eventId, type)
   }
   
   return { mainQR, plusOneQR }
@@ -49,11 +50,17 @@ export async function generateQRCodesForGuest(guestId: string, hasPlusOne: boole
 
 export async function validateQRCode(code: string) {
   try {
-    const qrCode = await prisma.qRCode.findFirst({
+    const qrCode = await (prisma as any).qRCode.findFirst({
       where: { code },
       include: {
         guest: {
-          include: { event: true }
+          include: { 
+            eventGuests: {
+              include: {
+                event: true
+              }
+            }
+          }
         }
       }
     })
@@ -66,11 +73,14 @@ export async function validateQRCode(code: string) {
       return { valid: false, error: 'QR code already used' }
     }
 
+    // Get the first event (or you could pass eventId as parameter)
+    const event = qrCode.guest.eventGuests[0]?.event
+
     return { 
       valid: true, 
       qrCode,
       guest: qrCode.guest,
-      event: qrCode.guest.event
+      event
     }
   } catch (error) {
     console.error('QR code validation failed:', error)
@@ -80,7 +90,7 @@ export async function validateQRCode(code: string) {
 
 export async function useQRCode(code: string) {
   try {
-    const qrCode = await prisma.qRCode.update({
+    const qrCode = await (prisma as any).qRCode.update({
       where: { code },
       data: {
         isUsed: true,
@@ -88,7 +98,13 @@ export async function useQRCode(code: string) {
       },
       include: {
         guest: {
-          include: { event: true }
+          include: { 
+            eventGuests: {
+              include: {
+                event: true
+              }
+            }
+          }
         }
       }
     })

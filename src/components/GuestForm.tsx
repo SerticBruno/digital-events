@@ -20,13 +20,14 @@ const guestSchema = z.object({
 type GuestFormData = z.infer<typeof guestSchema>
 
 interface GuestFormProps {
-  eventId: string
+  eventId?: string
   onSubmit: (data: GuestFormData) => Promise<void>
   initialData?: Partial<GuestFormData>
   isLoading?: boolean
+  isGlobal?: boolean
 }
 
-export default function GuestForm({ eventId, onSubmit, initialData, isLoading = false }: GuestFormProps) {
+export default function GuestForm({ eventId, onSubmit, initialData, isLoading = false, isGlobal = false }: GuestFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   const {

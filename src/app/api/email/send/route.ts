@@ -5,11 +5,11 @@ import { prisma } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, guestIds, hasPlusOne } = body
+    const { type, guestIds, eventId, hasPlusOne } = body
 
-    if (!type || !guestIds || !Array.isArray(guestIds)) {
+    if (!type || !guestIds || !Array.isArray(guestIds) || !eventId) {
       return NextResponse.json(
-        { error: 'Type and guest IDs array are required' },
+        { error: 'Type, guest IDs array, and event ID are required' },
         { status: 400 }
       )
     }
@@ -22,16 +22,16 @@ export async function POST(request: NextRequest) {
 
         switch (type) {
           case 'save_the_date':
-            result = await sendSaveTheDate(guestId)
+            result = await sendSaveTheDate(guestId, eventId)
             break
           case 'invitation':
-            result = await sendInvitation(guestId, hasPlusOne)
+            result = await sendInvitation(guestId, hasPlusOne, eventId)
             break
           case 'qr_code':
-            result = await sendQRCode(guestId)
+            result = await sendQRCode(guestId, eventId)
             break
           case 'survey':
-            result = await sendSurvey(guestId)
+            result = await sendSurvey(guestId, eventId)
             break
           default:
             throw new Error(`Unknown email type: ${type}`)
@@ -39,13 +39,13 @@ export async function POST(request: NextRequest) {
 
         if (result.success) {
           // Update invitation status in database
-          await prisma.invitation.create({
+          await (prisma as any).invitation.create({
             data: {
               type: type.toUpperCase().replace('_', '') as any,
               status: 'SENT',
               sentAt: new Date(),
               guestId,
-              eventId: (await prisma.guest.findUnique({ where: { id: guestId } }))?.eventId || ''
+              eventId
             }
           })
 

@@ -154,11 +154,16 @@ export default function Dashboard() {
   }
 
   const sendEmails = async (type: string, guestIds: string[]) => {
+    if (!selectedEvent) {
+      alert('Please select an event first')
+      return
+    }
+
     try {
       const response = await fetch('/api/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, guestIds })
+        body: JSON.stringify({ type, guestIds, eventId: selectedEvent.id })
       })
       const result = await response.json()
       alert(result.message)
@@ -184,12 +189,12 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      {/* Page Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Digital Events</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Event Dashboard</h1>
               <p className="text-gray-600">Manage your events and guests</p>
             </div>
             <div className="flex items-center space-x-4">
@@ -210,7 +215,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Event Selection */}

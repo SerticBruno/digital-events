@@ -5,8 +5,9 @@ import { Upload, Download, AlertCircle, CheckCircle } from 'lucide-react'
 import { getButtonClasses, componentStyles } from '@/lib/design-system'
 
 interface CSVUploadProps {
-  eventId: string
+  eventId?: string
   onUpload: (guests: any[]) => Promise<void>
+  isGlobal?: boolean
 }
 
 interface CSVRow {
@@ -19,7 +20,7 @@ interface CSVRow {
   isVip?: boolean
 }
 
-export default function CSVUpload({ eventId, onUpload }: CSVUploadProps) {
+export default function CSVUpload({ eventId, onUpload, isGlobal = false }: CSVUploadProps) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<CSVRow[]>([])
   const [isUploading, setIsUploading] = useState(false)
