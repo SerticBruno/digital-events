@@ -286,7 +286,9 @@ export async function sendInvitation(guestId: string, eventId?: string) {
     location: eventData.eventLocation,
     maxGuests: eventData.eventMaxGuests
   }
-  const responseUrl = `${process.env.NEXTAUTH_URL || 'https://digital-events.vercel.app'}/respond/${guestId}`
+  // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
+  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const responseUrl = `${baseUrl}/respond/${guestId}`
   
   // Generate QR code for this guest
   const qrCode = `GUEST_${guestId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -545,7 +547,9 @@ export async function sendPlusOneInvitation(guestId: string, plusOneEmail: strin
     location: eventData.eventLocation,
     maxGuests: eventData.eventMaxGuests
   }
-  const responseUrl = `${process.env.NEXTAUTH_URL}/respond/${guestId}?plusOne=true`
+  // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
+  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const responseUrl = `${baseUrl}/respond/${guestId}?plusOne=true`
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -773,7 +777,9 @@ export async function sendSurvey(guestId: string, eventId?: string) {
     location: eventData.eventLocation,
     maxGuests: eventData.eventMaxGuests
   }
-  const surveyUrl = `${process.env.NEXTAUTH_URL}/survey/${guestId}`
+  // Use TEST_URL for survey links if available, otherwise fall back to NEXTAUTH_URL
+  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const surveyUrl = `${baseUrl}/survey/${guestId}`
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
