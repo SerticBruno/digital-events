@@ -1175,30 +1175,31 @@ export default function Dashboard() {
                     </div>
                     
                     {/* Bulk Actions */}
-                    {selectedGuests.size > 0 && (
-                      <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
-                        <button
-                          onClick={regenerateMissingQRCodes}
-                          disabled={sendingEmails}
-                          className={`${getButtonClasses('orange')} text-xs`}
-                        >
-                          <QrCode className="w-3 h-3" />
-                          Regenerate QR
-                        </button>
-                        <button className={`${getButtonClasses('secondary')} text-xs`}>
-                          <Download className="w-3 h-3" />
-                          Export
-                        </button>
-                        <button
-                          onClick={deleteSelectedGuests}
-                          disabled={sendingEmails}
-                          className={`${getButtonClasses('danger')} text-xs`}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Delete
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
+                      <button
+                        onClick={regenerateMissingQRCodes}
+                        disabled={selectedGuests.size === 0 || sendingEmails}
+                        className={`${getButtonClasses('orange')} text-xs`}
+                      >
+                        <QrCode className="w-3 h-3" />
+                        Regenerate QR
+                      </button>
+                      <button 
+                        disabled={selectedGuests.size === 0}
+                        className={`${getButtonClasses('secondary')} text-xs`}
+                      >
+                        <Download className="w-3 h-3" />
+                        Export
+                      </button>
+                      <button
+                        onClick={deleteSelectedGuests}
+                        disabled={selectedGuests.size === 0 || sendingEmails}
+                        className={`${getButtonClasses('danger')} text-xs`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

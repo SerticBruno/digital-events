@@ -158,15 +158,15 @@ export default function DataTable({
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
       {/* Search and Filters */}
       {searchable && (
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 bg-white">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search guests..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500 font-medium"
             />
           </div>
         </div>
@@ -223,8 +223,8 @@ export default function DataTable({
               paginatedData.map((row, index) => (
                 <tr
                   key={row.id || index}
-                  className={`hover:bg-gray-50 transition-colors duration-150 ${
-                    selectedRows.has(row.id) ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                  className={`hover:bg-gray-50 transition-colors duration-150 border-l-4 ${
+                    selectedRows.has(row.id) ? 'bg-blue-50 border-l-blue-500' : 'border-l-transparent'
                   }`}
                 >
                   {selectable && (
@@ -254,43 +254,43 @@ export default function DataTable({
         </table>
       </div>
 
-      {/* Pagination */}
+            {/* Pagination */}
       {pagination && totalPages > 1 && (
         <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-700">
+            <div className="text-sm text-gray-700 font-medium">
               Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAndSortedData.length)} of {filteredAndSortedData.length} results
             </div>
-                         <div className="flex items-center space-x-2">
-               <button
-                 onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
-                 disabled={currentPage === 1 || isTransitioning}
-                 className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-               >
-                 Previous
-               </button>
-               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                 <button
-                   key={page}
-                   onClick={() => handlePageChange(page)}
-                   disabled={isTransitioning}
-                   className={`px-3 py-1 text-sm border rounded-md transition-colors ${
-                     currentPage === page
-                       ? 'bg-blue-600 text-white border-blue-600'
-                       : 'border-gray-300 hover:bg-gray-50'
-                   }`}
-                 >
-                   {page}
-                 </button>
-               ))}
-               <button
-                 onClick={() => handlePageChange(Math.min(currentPage + 1, totalPages))}
-                 disabled={currentPage === totalPages || isTransitioning}
-                 className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-               >
-                 Next
-               </button>
-             </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
+                disabled={currentPage === 1 || isTransitioning}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-white hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors bg-white text-gray-700 font-medium"
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  disabled={isTransitioning}
+                  className={`px-3 py-1.5 text-sm border rounded-md transition-colors font-medium ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'border-gray-300 hover:bg-white hover:border-gray-400 bg-white text-gray-700'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(Math.min(currentPage + 1, totalPages))}
+                disabled={currentPage === totalPages || isTransitioning}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-white hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors bg-white text-gray-700 font-medium"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}
