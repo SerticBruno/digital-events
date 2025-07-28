@@ -5,6 +5,7 @@ import { Calendar, Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Uplo
 import EventForm from '@/components/EventForm'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
+import { getButtonClasses, getInputClasses, componentStyles } from '@/lib/design-system'
 
 interface Event {
   id: string
@@ -173,7 +174,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
@@ -182,7 +183,7 @@ export default function Dashboard() {
             </div>
             <button 
               onClick={() => setShowEventModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
+              className={getButtonClasses('primary')}
             >
               <Plus className="w-4 h-4" />
               New Event
@@ -194,7 +195,7 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Event Selection */}
         <div className="mb-8">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className={componentStyles.label}>
             Select Event
           </label>
           <select
@@ -203,7 +204,7 @@ export default function Dashboard() {
               const event = events.find(ev => ev.id === e.target.value)
               setSelectedEvent(event || null)
             }}
-            className="w-full max-w-md border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={getInputClasses()}
           >
             {events.map((event) => (
               <option key={event.id} value={event.id}>
@@ -217,8 +218,8 @@ export default function Dashboard() {
           <>
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
+              <div className={componentStyles.card.base}>
+                <div className="flex items-center p-6">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <Users className="w-6 h-6 text-blue-600" />
                   </div>
@@ -229,8 +230,8 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
+              <div className={componentStyles.card.base}>
+                <div className="flex items-center p-6">
                   <div className="p-2 bg-green-100 rounded-lg">
                     <Mail className="w-6 h-6 text-green-600" />
                   </div>
@@ -241,10 +242,10 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <QrCode className="w-6 h-6 text-purple-600" />
+              <div className={componentStyles.card.base}>
+                <div className="flex items-center p-6">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <QrCode className="w-6 h-6 text-orange-600" />
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">QR Codes</p>
@@ -253,10 +254,10 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <BarChart3 className="w-6 h-6 text-orange-600" />
+              <div className={componentStyles.card.base}>
+                <div className="flex items-center p-6">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <BarChart3 className="w-6 h-6 text-purple-600" />
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Surveys</p>
@@ -267,58 +268,62 @@ export default function Dashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow p-6 mb-8">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowCSVModal(true)}
-                    className="bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-orange-700"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Bulk Import
-                  </button>
-                  <button
-                    onClick={() => setShowGuestModal(true)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Guest
-                  </button>
+            <div className={componentStyles.card.base}>
+              <div className={componentStyles.card.header}>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowCSVModal(true)}
+                      className={getButtonClasses('warning')}
+                    >
+                      <Upload className="w-4 h-4" />
+                      Bulk Import
+                    </button>
+                    <button
+                      onClick={() => setShowGuestModal(true)}
+                      className={getButtonClasses('success')}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Guest
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-4">
-                <button
-                  onClick={() => sendEmails('save_the_date', guests.map(g => g.id))}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
-                >
-                  <Send className="w-4 h-4" />
-                  Send Save the Date
-                </button>
-                <button
-                  onClick={() => sendEmails('invitation', guests.map(g => g.id))}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
-                >
-                  <Send className="w-4 h-4" />
-                  Send Invitations
-                </button>
-                <button
-                  onClick={() => sendEmails('qr_code', guests.map(g => g.id))}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700"
-                >
-                  <QrCode className="w-4 h-4" />
-                  Send QR Codes
-                </button>
-                <button className="bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700">
-                  <Download className="w-4 h-4" />
-                  Export Guest List
-                </button>
+              <div className={componentStyles.card.content}>
+                <div className="flex flex-wrap gap-4">
+                  <button
+                    onClick={() => sendEmails('save_the_date', guests.map(g => g.id))}
+                    className={getButtonClasses('primary')}
+                  >
+                    <Send className="w-4 h-4" />
+                    Send Save the Date
+                  </button>
+                  <button
+                    onClick={() => sendEmails('invitation', guests.map(g => g.id))}
+                    className={getButtonClasses('success')}
+                  >
+                    <Send className="w-4 h-4" />
+                    Send Invitations
+                  </button>
+                  <button
+                    onClick={() => sendEmails('qr_code', guests.map(g => g.id))}
+                    className={getButtonClasses('warning')}
+                  >
+                    <QrCode className="w-4 h-4" />
+                    Send QR Codes
+                  </button>
+                  <button className={getButtonClasses('secondary')}>
+                    <Download className="w-4 h-4" />
+                    Export Guest List
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Guests Table */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className={componentStyles.card.base}>
+              <div className={componentStyles.card.header}>
                 <h3 className="text-lg font-medium text-gray-900">Guest List</h3>
               </div>
               <div className="overflow-x-auto">
@@ -394,54 +399,60 @@ export default function Dashboard() {
 
       {/* Event Modal */}
       {showEventModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
+        <div className={componentStyles.modal.overlay}>
+          <div className={componentStyles.modal.container}>
+            <div className={componentStyles.modal.header}>
               <h2 className="text-2xl font-bold text-gray-900">Create New Event</h2>
               <button
                 onClick={() => setShowEventModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className={componentStyles.modal.closeButton}
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <EventForm onSubmit={createEvent} />
+            <div className={componentStyles.modal.content}>
+              <EventForm onSubmit={createEvent} />
+            </div>
           </div>
         </div>
       )}
 
       {/* Guest Modal */}
       {showGuestModal && selectedEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
+        <div className={componentStyles.modal.overlay}>
+          <div className={componentStyles.modal.container}>
+            <div className={componentStyles.modal.header}>
               <h2 className="text-2xl font-bold text-gray-900">Add New Guest</h2>
               <button
                 onClick={() => setShowGuestModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className={componentStyles.modal.closeButton}
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <GuestForm eventId={selectedEvent.id} onSubmit={addGuest} />
+            <div className={componentStyles.modal.content}>
+              <GuestForm eventId={selectedEvent.id} onSubmit={addGuest} />
+            </div>
           </div>
         </div>
       )}
 
       {/* CSV Upload Modal */}
       {showCSVModal && selectedEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
+        <div className={componentStyles.modal.overlay}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className={componentStyles.modal.header}>
               <h2 className="text-2xl font-bold text-gray-900">Bulk Import Guests</h2>
               <button
                 onClick={() => setShowCSVModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className={componentStyles.modal.closeButton}
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <CSVUpload eventId={selectedEvent.id} onUpload={bulkUploadGuests} />
+            <div className={componentStyles.modal.content}>
+              <CSVUpload eventId={selectedEvent.id} onUpload={bulkUploadGuests} />
+            </div>
           </div>
         </div>
       )}

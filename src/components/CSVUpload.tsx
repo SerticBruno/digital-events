@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Upload, Download, AlertCircle, CheckCircle } from 'lucide-react'
+import { getButtonClasses, componentStyles } from '@/lib/design-system'
 
 interface CSVUploadProps {
   eventId: string
@@ -147,7 +148,7 @@ Jane,Smith,jane.smith@example.com,Another Corp,Director,+1234567891,true`
         
         <button
           onClick={downloadTemplate}
-          className="mb-4 bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700"
+          className={getButtonClasses('secondary')}
         >
           <Download className="w-4 h-4" />
           Download Template
@@ -201,20 +202,20 @@ Jane,Smith,jane.smith@example.com,Another Corp,Director,+1234567891,true`
           <div className="bg-gray-50 rounded-lg p-4">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2">Name</th>
-                  <th className="text-left py-2">Email</th>
-                  <th className="text-left py-2">Company</th>
-                  <th className="text-left py-2">VIP</th>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 text-gray-600">Name</th>
+                  <th className="text-left py-2 text-gray-600">Email</th>
+                  <th className="text-left py-2 text-gray-600">Company</th>
+                  <th className="text-left py-2 text-gray-600">VIP</th>
                 </tr>
               </thead>
               <tbody>
                 {preview.map((row, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="py-2">{row.firstName} {row.lastName}</td>
-                    <td className="py-2">{row.email}</td>
-                    <td className="py-2">{row.company || '-'}</td>
-                    <td className="py-2">{row.isVip ? 'Yes' : 'No'}</td>
+                  <tr key={index} className="border-b border-gray-200">
+                    <td className="py-2 text-gray-900">{row.firstName} {row.lastName}</td>
+                    <td className="py-2 text-gray-900">{row.email}</td>
+                    <td className="py-2 text-gray-900">{row.company || '-'}</td>
+                    <td className="py-2 text-gray-900">{row.isVip ? 'Yes' : 'No'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -228,7 +229,7 @@ Jane,Smith,jane.smith@example.com,Another Corp,Director,+1234567891,true`
           <button
             onClick={handleUpload}
             disabled={isUploading}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={getButtonClasses('primary')}
           >
             {isUploading ? 'Uploading...' : 'Upload Guests'}
           </button>
