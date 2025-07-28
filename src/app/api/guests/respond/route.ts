@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    let deletedPlusOneEmail = null
+
     // Validate response values
     const validResponses = ['COMING', 'NOT_COMING', 'COMING_WITH_PLUS_ONE']
     if (!validResponses.includes(response)) {
@@ -53,6 +55,34 @@ export async function POST(request: NextRequest) {
     })
 
     if (invitation) {
+      // Check if the guest previously had a plus-one and is now changing their response
+      const hadPlusOne = invitation.hasPlusOne
+      const previousPlusOneEmail = invitation.plusOneEmail
+      let deletedPlusOneEmail = null
+      
+      // If guest previously had a plus-one but is now changing to not have one, delete the plus-one guest
+      // This handles scenarios like: "coming with plus-one" → "coming alone" or "not coming"
+      if (hadPlusOne && response !== 'COMING_WITH_PLUS_ONE' && previousPlusOneEmail) {
+        try {
+          // Find the plus-one guest
+          const plusOneGuest = await prisma.guest.findUnique({
+            where: { email: previousPlusOneEmail }
+          })
+          
+          if (plusOneGuest) {
+            // Delete the plus-one guest (this will cascade delete all related records)
+            await prisma.guest.delete({
+              where: { id: plusOneGuest.id }
+            })
+            deletedPlusOneEmail = previousPlusOneEmail
+            console.log(`Deleted plus-one guest: ${previousPlusOneEmail} because main guest changed response`)
+          }
+        } catch (error) {
+          console.error('Failed to delete plus-one guest:', error)
+          // Continue with the response update even if plus-one deletion fails
+        }
+      }
+      
       // Update existing invitation - preserve the sentAt timestamp if it exists
       invitation = await prisma.invitation.update({
         where: { id: invitation.id },
@@ -148,9 +178,18 @@ export async function POST(request: NextRequest) {
 
     console.log('Response saved successfully:', invitation)
     
+    // Prepare response message
+    let message = 'Response recorded successfully'
+    
+    // If we deleted a plus-one, include that information
+    if (deletedPlusOneEmail) {
+      message += '. Plus-one guest has been removed.'
+    }
+    
     return NextResponse.json({
-      message: 'Response recorded successfully',
-      invitation
+      message,
+      invitation,
+      deletedPlusOne: deletedPlusOneEmail
     })
   } catch (error) {
     console.error('Failed to record response:', error)

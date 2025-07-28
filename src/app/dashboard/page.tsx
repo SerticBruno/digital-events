@@ -642,19 +642,37 @@ export default function Dashboard() {
 
     setSendingEmails(true)
     try {
-      const deletePromises = Array.from(selectedGuests).map(guestId => 
-        fetch(`/api/guests/global?guestId=${guestId}`, {
+      const deletePromises = Array.from(selectedGuests).map(async guestId => {
+        const response = await fetch(`/api/guests/global?guestId=${guestId}`, {
           method: 'DELETE'
         })
-      )
+        return { response, guestId }
+      })
 
       const results = await Promise.all(deletePromises)
-      const successCount = results.filter(r => r.ok).length
-      const failureCount = results.length - successCount
+      const successResults = results.filter(r => r.response.ok)
+      const failureCount = results.length - successResults.length
 
-      let message = `Successfully deleted ${successCount} guest(s)`
+      let message = `Successfully deleted ${successResults.length} guest(s)`
       if (failureCount > 0) {
         message += `, ${failureCount} failed`
+      }
+
+      // Check for deleted plus-ones
+      let totalPlusOnesDeleted = 0
+      for (const result of successResults) {
+        try {
+          const data = await result.response.json()
+          if (data.deletedPlusOnes && data.deletedPlusOnes.length > 0) {
+            totalPlusOnesDeleted += data.deletedPlusOnes.length
+          }
+        } catch (e) {
+          // Ignore JSON parsing errors
+        }
+      }
+
+      if (totalPlusOnesDeleted > 0) {
+        message += `\n\nAlso deleted ${totalPlusOnesDeleted} plus-one guest(s) associated with the deleted guests.`
       }
 
       alert(message)

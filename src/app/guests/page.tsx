@@ -120,7 +120,14 @@ export default function GuestsPage() {
       
       if (response.ok) {
         const result = await response.json()
-        alert(`Guest ${guestName} has been permanently deleted.`)
+        let message = `Guest ${guestName} has been permanently deleted.`
+        
+        if (result.deletedPlusOnes && result.deletedPlusOnes.length > 0) {
+          const plusOneNames = result.deletedPlusOnes.map((po: any) => `${po.firstName} ${po.lastName} (${po.email})`).join(', ')
+          message += `\n\nAlso deleted ${result.deletedPlusOnes.length} plus-one guest(s): ${plusOneNames}`
+        }
+        
+        alert(message)
         await fetchGuests()
       } else {
         const errorData = await response.json()

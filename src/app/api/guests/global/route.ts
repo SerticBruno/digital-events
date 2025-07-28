@@ -111,7 +111,9 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Find plus-one guests to delete
+    // Find plus-one guests to delete (cascade deletion)
+    // When a guest is deleted, if they have plus-ones, those plus-ones should also be deleted
+    // since they were created specifically for this guest and have no independent existence
     const plusOneEmails = guest.invitations
       .map(inv => inv.plusOneEmail)
       .filter(email => email) as string[]
@@ -134,7 +136,7 @@ export async function DELETE(request: NextRequest) {
         }
       })
 
-      // Delete plus-one guests first
+      // Delete plus-one guests first (before deleting the main guest)
       for (const plusOneGuest of plusOneGuests) {
         await prisma.guest.delete({
           where: { id: plusOneGuest.id }
@@ -163,6 +165,7 @@ export async function DELETE(request: NextRequest) {
         lastName: guest.lastName,
         email: guest.email
       },
+      deletedPlusOnes,
       associatedEvents
     })
   } catch (error) {
