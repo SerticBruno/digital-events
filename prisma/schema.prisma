@@ -53,12 +53,12 @@ model Guest {
 
 model Invitation {
   id        String   @id @default(cuid())
-  type      InvitationType
-  status    InvitationStatus @default(PENDING)
+  type      String   // SAVE_THE_DATE, INVITATION, QR_CODE, SURVEY
+  status    String   @default("PENDING") // PENDING, SENT, OPENED, RESPONDED, FAILED
   sentAt    DateTime?
   openedAt  DateTime?
   respondedAt DateTime?
-  response  InvitationResponse?
+  response  String?  // COMING, NOT_COMING, COMING_WITH_PLUS_ONE, COMING_ALONE
   hasPlusOne Boolean @default(false)
   plusOneName String?
   createdAt DateTime @default(now())
@@ -76,7 +76,7 @@ model Invitation {
 model QRCode {
   id        String   @id @default(cuid())
   code      String   @unique
-  type      QRCodeType
+  type      String   // REGULAR, VIP
   isUsed    Boolean  @default(false)
   usedAt    DateTime?
   createdAt DateTime @default(now())
@@ -103,31 +103,4 @@ model Survey {
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("surveys")
-}
-
-enum InvitationType {
-  SAVE_THE_DATE
-  INVITATION
-  QR_CODE
-  SURVEY
-}
-
-enum InvitationStatus {
-  PENDING
-  SENT
-  OPENED
-  RESPONDED
-  FAILED
-}
-
-enum InvitationResponse {
-  COMING
-  NOT_COMING
-  COMING_WITH_PLUS_ONE
-  COMING_ALONE
-}
-
-enum QRCodeType {
-  REGULAR
-  VIP
 } 

@@ -105,7 +105,7 @@ export async function sendQRCode(guestId: string) {
 
   if (!guest) throw new Error('Guest not found')
 
-  const qrCodes = guest.qrCodes.filter(qr => !qr.isUsed)
+  const qrCodes = guest.qrCodes.filter((qr: any) => !qr.isUsed)
   if (qrCodes.length === 0) throw new Error('No QR codes available')
 
   const html = `
