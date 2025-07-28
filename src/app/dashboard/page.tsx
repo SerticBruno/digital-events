@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Users, Mail, QrCode, BarChart3, Plus, Send, Download } from 'lucide-react'
+import { Calendar, Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload } from 'lucide-react'
+import EventForm from '@/components/EventForm'
+import GuestForm from '@/components/GuestForm'
+import CSVUpload from '@/components/CSVUpload'
 
 interface Event {
   id: string
@@ -35,6 +38,9 @@ export default function Dashboard() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [guests, setGuests] = useState<Guest[]>([])
   const [loading, setLoading] = useState(true)
+  const [showEventModal, setShowEventModal] = useState(false)
+  const [showGuestModal, setShowGuestModal] = useState(false)
+  const [showCSVModal, setShowCSVModal] = useState(false)
 
   useEffect(() => {
     fetchEvents()
@@ -68,6 +74,70 @@ export default function Dashboard() {
       setGuests(data)
     } catch (error) {
       console.error('Failed to fetch guests:', error)
+    }
+  }
+
+  const createEvent = async (data: any) => {
+    try {
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      
+      if (response.ok) {
+        await fetchEvents()
+        setShowEventModal(false)
+      } else {
+        throw new Error('Failed to create event')
+      }
+    } catch (error) {
+      console.error('Failed to create event:', error)
+      alert('Failed to create event')
+    }
+  }
+
+  const addGuest = async (data: any) => {
+    if (!selectedEvent) return
+    
+    try {
+      const response = await fetch('/api/guests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, eventId: selectedEvent.id })
+      })
+      
+      if (response.ok) {
+        await fetchGuests(selectedEvent.id)
+        setShowGuestModal(false)
+      } else {
+        throw new Error('Failed to add guest')
+      }
+    } catch (error) {
+      console.error('Failed to add guest:', error)
+      alert('Failed to add guest')
+    }
+  }
+
+  const bulkUploadGuests = async (guests: any[]) => {
+    if (!selectedEvent) return
+    
+    try {
+      const response = await fetch('/api/guests/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: selectedEvent.id, guests })
+      })
+      
+      if (response.ok) {
+        await fetchGuests(selectedEvent.id)
+        setShowCSVModal(false)
+      } else {
+        throw new Error('Failed to bulk upload guests')
+      }
+    } catch (error) {
+      console.error('Failed to bulk upload guests:', error)
+      alert('Failed to bulk upload guests')
     }
   }
 
@@ -110,7 +180,10 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold text-gray-900">Digital Events</h1>
               <p className="text-gray-600">Manage your events and guests</p>
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700">
+            <button 
+              onClick={() => setShowEventModal(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
+            >
               <Plus className="w-4 h-4" />
               New Event
             </button>
@@ -195,7 +268,25 @@ export default function Dashboard() {
 
             {/* Quick Actions */}
             <div className="bg-white rounded-lg shadow p-6 mb-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowCSVModal(true)}
+                    className="bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-orange-700"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Bulk Import
+                  </button>
+                  <button
+                    onClick={() => setShowGuestModal(true)}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Guest
+                  </button>
+                </div>
+              </div>
               <div className="flex flex-wrap gap-4">
                 <button
                   onClick={() => sendEmails('save_the_date', guests.map(g => g.id))}
@@ -300,6 +391,60 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {/* Event Modal */}
+      {showEventModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Create New Event</h2>
+              <button
+                onClick={() => setShowEventModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <EventForm onSubmit={createEvent} />
+          </div>
+        </div>
+      )}
+
+      {/* Guest Modal */}
+      {showGuestModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Add New Guest</h2>
+              <button
+                onClick={() => setShowGuestModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <GuestForm eventId={selectedEvent.id} onSubmit={addGuest} />
+          </div>
+        </div>
+      )}
+
+      {/* CSV Upload Modal */}
+      {showCSVModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Bulk Import Guests</h2>
+              <button
+                onClick={() => setShowCSVModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <CSVUpload eventId={selectedEvent.id} onUpload={bulkUploadGuests} />
+          </div>
+        </div>
+      )}
     </div>
   )
 } 
