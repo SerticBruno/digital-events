@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { CheckCircle, XCircle, UserPlus, Calendar, MapPin, Clock } from 'lucide-react'
-import { getButtonClasses, componentStyles } from '@/lib/design-system'
+import { CheckCircle, XCircle, UserPlus, Calendar, MapPin } from 'lucide-react'
 
 interface Guest {
   id: string
@@ -22,25 +21,18 @@ interface Event {
   location?: string
 }
 
-interface Invitation {
-  id: string
-  type: string
-  status: string
-  response?: string
-  hasPlusOne: boolean
-  plusOneName?: string
-}
+
 
 export default function RespondPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const guestId = params.guestId as string
-  const isPlusOne = searchParams.get('plusOne') === 'true'
+
   const response = searchParams.get('response')
 
   const [guest, setGuest] = useState<Guest | null>(null)
   const [event, setEvent] = useState<Event | null>(null)
-  const [invitation, setInvitation] = useState<Invitation | null>(null)
+
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -52,7 +44,7 @@ export default function RespondPage() {
     if (guestId) {
       fetchGuestData()
     }
-  }, [guestId])
+  }, [guestId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (response && guest && event && !submitted) {
@@ -62,11 +54,11 @@ export default function RespondPage() {
         handleResponse(response)
       }
     }
-  }, [response, guest, event, submitted])
+  }, [response, guest, event, submitted]) // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
-  const fetchGuestData = async () => {
+  const fetchGuestData = useCallback(async () => {
     try {
       const response = await fetch(`/api/guests/${guestId}`)
       if (!response.ok) {
@@ -75,16 +67,15 @@ export default function RespondPage() {
       const data = await response.json()
       setGuest(data.guest)
       setEvent(data.event)
-      setInvitation(data.invitation)
     } catch (error) {
       console.error('Failed to fetch guest data:', error)
       setError('Guest not found or invitation has expired')
     } finally {
       setLoading(false)
     }
-  }
+  }, [guestId])
 
-  const handleResponse = async (responseType: string) => {
+  const handleResponse = useCallback(async (responseType: string) => {
     if (!guest || !event) return
 
     setSubmitting(true)
@@ -113,13 +104,13 @@ export default function RespondPage() {
     } finally {
       setSubmitting(false)
     }
-  }
+  }, [guest, event, guestId, plusOneEmail])
 
   const handlePlusOneResponse = () => {
-    if (!plusOneEmail.trim()) {
-      setError('Please enter your guest\'s email')
-      return
-    }
+          if (!plusOneEmail.trim()) {
+        setError('Please enter your guest&apos;s email')
+        return
+      }
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(plusOneEmail)) {
@@ -204,7 +195,7 @@ export default function RespondPage() {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-8 text-center">
-            <h1 className="text-3xl font-bold text-white mb-2">You're Invited!</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">You&apos;re Invited!</h1>
             <p className="text-blue-100">Please respond to your invitation</p>
           </div>
 
@@ -268,7 +259,7 @@ export default function RespondPage() {
                   className="w-full bg-green-600 hover:bg-green-700 text-white py-4 px-6 rounded-lg font-semibold transition-colors disabled:opacity-50"
                 >
                   <CheckCircle className="w-5 h-5 inline mr-2" />
-                  Yes, I'm Coming
+                  Yes, I&apos;m Coming
                 </button>
 
                 <button
@@ -277,7 +268,7 @@ export default function RespondPage() {
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 px-6 rounded-lg font-semibold transition-colors disabled:opacity-50"
                 >
                   <UserPlus className="w-5 h-5 inline mr-2" />
-                  Yes, I'm Coming with a Guest
+                  Yes, I&apos;m Coming with a Guest
                 </button>
 
                 <button
@@ -286,24 +277,24 @@ export default function RespondPage() {
                   className="w-full bg-red-600 hover:bg-red-700 text-white py-4 px-6 rounded-lg font-semibold transition-colors disabled:opacity-50"
                 >
                   <XCircle className="w-5 h-5 inline mr-2" />
-                  No, I Can't Come
+                  No, I Can&apos;t Come
                 </button>
               </div>
             ) : (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 text-center mb-6">
-                  Please provide your guest's email
+                  Please provide your guest&apos;s email
                 </h3>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Guest Email
+                    Guest&apos;s Email
                   </label>
                   <input
                     type="email"
                     value={plusOneEmail}
                     onChange={(e) => setPlusOneEmail(e.target.value)}
-                    placeholder="Enter your guest's email address"
+                    placeholder="Enter your guest&apos;s email address"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>

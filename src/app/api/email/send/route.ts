@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, guestIds, eventId, hasPlusOne, plusOneEmails, plusOneNames, to, subject, html } = body
+    const { type, guestIds, eventId, plusOneEmails, plusOneNames, to, subject, html } = body
 
     // Handle test emails (direct email sending)
     if (to && subject && html) {
@@ -82,14 +82,9 @@ export async function POST(request: NextRequest) {
           case 'save_the_date':
             result = await sendSaveTheDate(guestId, eventId)
             break
-          case 'invitation':
-            // Check if guest has plus-one enabled
-            const invitation = await prisma.invitation.findFirst({
-              where: { guestId, eventId }
-            })
-            const hasPlusOne = invitation?.hasPlusOne || false
-            result = await sendInvitation(guestId, hasPlusOne, eventId)
-            break
+                            case 'invitation':
+                    result = await sendInvitation(guestId, eventId)
+                    break
           case 'qr_code':
             result = await sendQRCode(guestId, eventId)
             break
@@ -106,35 +101,35 @@ export async function POST(request: NextRequest) {
             throw new Error(`Unknown email type: ${type}`)
         }
 
-        if (result.success) {
-          // Update or create invitation status in database
-          let invitation = await prisma.invitation.findFirst({
-            where: { guestId, eventId }
-          })
+                    if (result.success) {
+              // Update or create invitation status in database
+              const existingInvitation = await prisma.invitation.findFirst({
+                where: { guestId, eventId }
+              })
 
-          if (invitation) {
-            // Update existing invitation
-            await prisma.invitation.update({
-              where: { id: invitation.id },
-              data: {
-                type: type.toUpperCase().replace('_', '') as string,
-                status: 'SENT',
-                sentAt: new Date()
+              if (existingInvitation) {
+                // Update existing invitation
+                await prisma.invitation.update({
+                  where: { id: existingInvitation.id },
+                  data: {
+                    type: type.toUpperCase().replace('_', '') as string,
+                    status: 'SENT',
+                    sentAt: new Date()
+                  }
+                })
+              } else {
+                // Create new invitation
+                await prisma.invitation.create({
+                  data: {
+                    type: type.toUpperCase().replace('_', '') as string,
+                    status: 'SENT',
+                    sentAt: new Date(),
+                    guestId,
+                    eventId,
+                    hasPlusOne: false
+                  }
+                })
               }
-            })
-          } else {
-            // Create new invitation
-            await prisma.invitation.create({
-              data: {
-                type: type.toUpperCase().replace('_', '') as string,
-                status: 'SENT',
-                sentAt: new Date(),
-                guestId,
-                eventId,
-                hasPlusOne: false
-              }
-            })
-          }
 
           results.push({ guestId, success: true, message: 'Email sent successfully' })
         } else {

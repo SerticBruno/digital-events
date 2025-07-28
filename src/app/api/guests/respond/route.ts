@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
 
         // Send invitation email to plus-one
         const { sendInvitation } = await import('@/lib/email')
-        await sendInvitation(plusOneGuest.id, false, eventId)
+        await sendInvitation(plusOneGuest.id, eventId)
 
       } catch (error) {
         console.error('Failed to create plus-one guest:', error)

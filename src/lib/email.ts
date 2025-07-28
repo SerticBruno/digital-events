@@ -214,7 +214,7 @@ export async function sendSaveTheDate(guestId: string, eventId?: string) {
   })
 }
 
-export async function sendInvitation(guestId: string, hasPlusOne: boolean = false, eventId?: string) {
+export async function sendInvitation(guestId: string, eventId?: string) {
   // Get guest data using raw SQL
   const guests = await prisma.$queryRaw<Array<{
     id: string;
@@ -286,8 +286,26 @@ export async function sendInvitation(guestId: string, hasPlusOne: boolean = fals
     location: eventData.eventLocation,
     maxGuests: eventData.eventMaxGuests
   }
-  const responseUrl = `${process.env.NEXTAUTH_URL}/respond/${guestId}`
+  const responseUrl = `${process.env.NEXTAUTH_URL || 'https://digital-events.vercel.app'}/respond/${guestId}`
   
+  // Generate QR code for this guest
+  const qrCode = `GUEST_${guestId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  
+  // Create QR code in database
+  if (eventId) {
+    await prisma.qRCode.create({
+      data: {
+        code: qrCode,
+        type: 'REGULAR',
+        guestId,
+        eventId
+      }
+    })
+  }
+
+  // Generate QR code image URL for response page
+  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(responseUrl)}`
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h1>You're Invited!</h1>
@@ -316,9 +334,12 @@ export async function sendInvitation(guestId: string, hasPlusOne: boolean = fals
       </div>
       <div style="background-color: #f9f9f9; border: 1px solid #ddd; padding: 15px; margin: 20px 0; border-radius: 4px;">
         <p style="margin: 0; color: #666; font-size: 14px;">
-          <strong>Entry Information:</strong> You will receive a QR code for entry. 
-          Please present this QR code at the event entrance. Each QR code can only be used once.
+          <strong>Quick Response:</strong> Scan this QR code with your phone to quickly respond to this invitation.
         </p>
+        <div style="text-align: center; margin-top: 15px;">
+          <img src="${qrCodeImageUrl}" alt="Response QR Code" style="border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: white;" />
+          <p style="margin-top: 10px; font-family: monospace; font-size: 12px; color: #666;">Scan to respond to invitation</p>
+        </div>
       </div>
       <p>Best regards,<br>Event Team</p>
     </div>
