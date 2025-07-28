@@ -12,33 +12,34 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.3.2",
+    "@prisma/client": "^5.7.1",
+    "clsx": "^2.0.0",
+    "date-fns": "^2.30.0",
+    "jsqr": "^1.4.0",
+    "lucide-react": "^0.294.0",
     "next": "^15.4.4",
+    "prisma": "^5.7.1",
+    "qrcode": "^1.5.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@prisma/client": "^5.7.1",
-    "prisma": "^5.7.1",
-    "resend": "^2.1.0",
-    "qrcode": "^1.5.3",
-    "react-qr-code": "^2.0.12",
     "react-hook-form": "^7.48.2",
-    "@hookform/resolvers": "^3.3.2",
-    "zod": "^3.22.4",
-    "zustand": "^4.4.7",
-    "lucide-react": "^0.294.0",
-    "clsx": "^2.0.0",
+    "react-hot-toast": "^2.4.1",
+    "react-qr-code": "^2.0.12",
+    "resend": "^2.1.0",
     "tailwind-merge": "^2.0.0",
-    "date-fns": "^2.30.0",
-    "react-hot-toast": "^2.4.1"
+    "zod": "^3.22.4",
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@types/qrcode": "^1.5.5",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "^15.4.4"
+    "eslint-config-next": "^15.4.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }

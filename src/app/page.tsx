@@ -1,50 +1,123 @@
 import Link from 'next/link'
+import { Calendar, QrCode, Users, Mail } from 'lucide-react'
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-      <div className="max-w-4xl mx-auto text-center px-4">
-        <h1 className="text-5xl font-bold text-gray-900 mb-6">
-          Digital Events Platform
-        </h1>
-        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          Streamline your event management with digital invitations, QR code entry, and automated follow-ups.
-          Perfect for large-scale events with 1700+ attendees.
-        </p>
-        
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link 
-            href="/dashboard"
-            className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Go to Dashboard
-          </Link>
-          <button className="bg-white text-blue-600 px-8 py-3 rounded-lg text-lg font-semibold border-2 border-blue-600 hover:bg-blue-50 transition-colors">
-            Learn More
-          </button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Digital Events</h1>
+              <p className="text-gray-600">Professional event management platform</p>
+            </div>
+          </div>
         </div>
+      </header>
 
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Digital Invitations</h3>
+      {/* Hero Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center">
+          <h2 className="text-4xl font-bold text-gray-900 mb-6">
+            Streamline Your Event Management
+          </h2>
+          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            Send digital invitations, track responses, manage QR codes for entry, and collect post-event feedback. 
+            Perfect for large-scale events with VIP guests.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Calendar className="w-5 h-5 mr-2" />
+              Go to Dashboard
+            </Link>
+            <Link
+              href="/scanner"
+              className="inline-flex items-center justify-center px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              <QrCode className="w-5 h-5 mr-2" />
+              QR Scanner
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Features */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+              <Mail className="w-6 h-6 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Digital Invitations</h3>
             <p className="text-gray-600">
-              Send personalized invitations with tracking and automated follow-ups.
+              Send professional digital invitations with tracking and RSVP management. 
+              Perfect for ministries and large companies.
             </p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">QR Code Entry</h3>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+              <QrCode className="w-6 h-6 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">QR Code Entry</h3>
             <p className="text-gray-600">
-              Secure entry with QR codes for both regular and VIP guests.
+              Generate unique QR codes for each guest. Fast and secure check-in process 
+              with real-time validation.
             </p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Post-Event Surveys</h3>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+              <Users className="w-6 h-6 text-purple-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Guest Management</h3>
             <p className="text-gray-600">
-              Automatically send feedback surveys to attendees after the event.
+              Manage 1700+ guests with VIP treatment. Bulk import, individual management, 
+              and comprehensive tracking.
             </p>
           </div>
         </div>
       </div>
+
+      {/* Stats */}
+      <div className="bg-white border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
+            <div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">1700+</div>
+              <div className="text-gray-600">Guests Supported</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-green-600 mb-2">100%</div>
+              <div className="text-gray-600">Email Delivery</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-orange-600 mb-2">Real-time</div>
+              <div className="text-gray-600">QR Validation</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-purple-600 mb-2">VIP</div>
+              <div className="text-gray-600">Guest Priority</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <p className="text-gray-400">
+              Digital Events Platform - Professional event management for large-scale events
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

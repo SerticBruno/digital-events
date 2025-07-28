@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload } from 'lucide-react'
+import { Calendar, Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan } from 'lucide-react'
 import EventForm from '@/components/EventForm'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
@@ -181,13 +181,22 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold text-gray-900">Digital Events</h1>
               <p className="text-gray-600">Manage your events and guests</p>
             </div>
-            <button 
-              onClick={() => setShowEventModal(true)}
-              className={getButtonClasses('primary')}
-            >
-              <Plus className="w-4 h-4" />
-              New Event
-            </button>
+            <div className="flex items-center space-x-4">
+              <a
+                href="/scanner"
+                className={getButtonClasses('warning')}
+              >
+                <Scan className="w-4 h-4" />
+                QR Scanner
+              </a>
+              <button 
+                onClick={() => setShowEventModal(true)}
+                className={getButtonClasses('primary')}
+              >
+                <Plus className="w-4 h-4" />
+                New Event
+              </button>
+            </div>
           </div>
         </div>
       </header>
