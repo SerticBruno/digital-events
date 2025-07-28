@@ -1,0 +1,101 @@
+import QRCode from 'qrcode'
+import { prisma } from './db'
+
+export async function generateQRCode(guestId: string, type: 'REGULAR' | 'VIP' = 'REGULAR') {
+  try {
+    // Generate a unique code
+    const code = `${guestId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    
+    // Create QR code as data URL
+    const qrDataUrl = await QRCode.toDataURL(code, {
+      width: 300,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    })
+
+    // Store in database
+    const qrCode = await prisma.qRCode.create({
+      data: {
+        code: qrDataUrl,
+        type,
+        guestId
+      }
+    })
+
+    return qrCode
+  } catch (error) {
+    console.error('QR code generation failed:', error)
+    throw error
+  }
+}
+
+export async function generateQRCodesForGuest(guestId: string, hasPlusOne: boolean = false, isVip: boolean = false) {
+  const type = isVip ? 'VIP' : 'REGULAR'
+  
+  // Generate QR code for main guest
+  const mainQR = await generateQRCode(guestId, type)
+  
+  // Generate QR code for plus one if needed
+  let plusOneQR = null
+  if (hasPlusOne) {
+    plusOneQR = await generateQRCode(guestId, type)
+  }
+  
+  return { mainQR, plusOneQR }
+}
+
+export async function validateQRCode(code: string) {
+  try {
+    const qrCode = await prisma.qRCode.findFirst({
+      where: { code },
+      include: {
+        guest: {
+          include: { event: true }
+        }
+      }
+    })
+
+    if (!qrCode) {
+      return { valid: false, error: 'Invalid QR code' }
+    }
+
+    if (qrCode.isUsed) {
+      return { valid: false, error: 'QR code already used' }
+    }
+
+    return { 
+      valid: true, 
+      qrCode,
+      guest: qrCode.guest,
+      event: qrCode.guest.event
+    }
+  } catch (error) {
+    console.error('QR code validation failed:', error)
+    return { valid: false, error: 'Validation failed' }
+  }
+}
+
+export async function useQRCode(code: string) {
+  try {
+    const qrCode = await prisma.qRCode.update({
+      where: { code },
+      data: {
+        isUsed: true,
+        usedAt: new Date()
+      },
+      include: {
+        guest: {
+          include: { event: true }
+        }
+      }
+    })
+
+    return { success: true, qrCode }
+  } catch (error) {
+    console.error('QR code usage failed:', error)
+    return { success: false, error }
+  }
+} 

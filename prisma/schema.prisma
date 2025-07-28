@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  date        DateTime
+  location    String?
+  maxGuests   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  guests      Guest[]
+  invitations Invitation[]
+  qrCodes     QRCode[]
+  surveys     Survey[]
+
+  @@map("events")
+}
+
+model Guest {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  firstName String
+  lastName  String
+  company   String?
+  position  String?
+  phone     String?
+  isVip     Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  eventId    String
+  event      Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  invitations Invitation[]
+  qrCodes    QRCode[]
+  survey     Survey?
+
+  @@map("guests")
+}
+
+model Invitation {
+  id        String   @id @default(cuid())
+  type      InvitationType
+  status    InvitationStatus @default(PENDING)
+  sentAt    DateTime?
+  openedAt  DateTime?
+  respondedAt DateTime?
+  response  InvitationResponse?
+  hasPlusOne Boolean @default(false)
+  plusOneName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("invitations")
+}
+
+model QRCode {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  type      QRCodeType
+  isUsed    Boolean  @default(false)
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  // Relations
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("qr_codes")
+}
+
+model Survey {
+  id        String   @id @default(cuid())
+  rating    Int      // 1-5 rating
+  feedback  String?
+  submittedAt DateTime @default(now())
+
+  // Relations
+  guestId   String   @unique
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("surveys")
+}
+
+enum InvitationType {
+  SAVE_THE_DATE
+  INVITATION
+  QR_CODE
+  SURVEY
+}
+
+enum InvitationStatus {
+  PENDING
+  SENT
+  OPENED
+  RESPONDED
+  FAILED
+}
+
+enum InvitationResponse {
+  COMING
+  NOT_COMING
+  COMING_WITH_PLUS_ONE
+  COMING_ALONE
+}
+
+enum QRCodeType {
+  REGULAR
+  VIP
+} 
