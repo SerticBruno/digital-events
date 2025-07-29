@@ -196,14 +196,36 @@ export default function GuestsPage() {
       })
       
       if (response.ok) {
+        const result = await response.json()
+        console.log('Bulk upload result:', result)
+        
+        // Show success message with details
+        const successCount = result.results?.length || 0
+        const errorCount = result.errors?.length || 0
+        
+        let message = `Successfully processed ${successCount} guests`
+        if (errorCount > 0) {
+          message += `, ${errorCount} failed`
+        }
+        
+        alert(message)
         await fetchGuests()
         setShowCSVModal(false)
       } else {
-        throw new Error('Failed to bulk upload guests')
+        // Try to get error details from response
+        let errorMessage = 'Failed to bulk upload guests'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          // If we can't parse JSON, use the status text
+          errorMessage = `${errorMessage}: ${response.statusText}`
+        }
+        throw new Error(errorMessage)
       }
     } catch (error) {
       console.error('Failed to bulk upload guests:', error)
-      alert('Failed to bulk upload guests')
+      alert(error instanceof Error ? error.message : 'Failed to bulk upload guests')
     }
   }
 
@@ -251,14 +273,14 @@ export default function GuestsPage() {
             <div className="flex gap-2 ml-4">
               <button
                 onClick={() => setShowGuestModal(true)}
-                className={`${getButtonClasses('primary')} flex items-center gap-2`}
+                className={getButtonClasses('primary')}
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">Add Guest</span>
               </button>
               <button
                 onClick={() => setShowCSVModal(true)}
-                className={`${getButtonClasses('secondary')} flex items-center gap-2`}
+                className={getButtonClasses('secondary')}
               >
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">Bulk Import</span>

@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
           // Create new guest using raw SQL
           const guestId = randomUUID()
           await prisma.$executeRaw`
-            INSERT INTO guests (id, email, firstName, lastName, company, position, phone, isVip, createdAt, updatedAt)
-            VALUES (${guestId}, ${guestData.email}, ${guestData.firstName}, ${guestData.lastName}, ${guestData.company || null}, ${guestData.position || null}, ${guestData.phone || null}, ${guestData.isVip || false}, datetime('now'), datetime('now'))
+            INSERT INTO guests (id, email, firstName, lastName, company, position, phone, isVip, isPlusOne, createdAt, updatedAt)
+            VALUES (${guestId}, ${guestData.email}, ${guestData.firstName}, ${guestData.lastName}, ${guestData.company || null}, ${guestData.position || null}, ${guestData.phone || null}, ${guestData.isVip || false}, false, datetime('now'), datetime('now'))
           `
           guest = {
             id: guestId,
@@ -64,9 +64,10 @@ export async function POST(request: NextRequest) {
             position: guestData.position || null,
             phone: guestData.phone || null,
             isVip: guestData.isVip || false,
+            isPlusOne: false,
             createdAt: new Date(),
             updatedAt: new Date()
-          } as unknown as { id: string; email: string; firstName: string; lastName: string; company: string | null; position: string | null; phone: string | null; isVip: boolean; createdAt: Date; updatedAt: Date; eventId: string }
+          } as unknown as { id: string; email: string; firstName: string; lastName: string; company: string | null; position: string | null; phone: string | null; isVip: boolean; isPlusOne: boolean; createdAt: Date; updatedAt: Date; eventId: string }
         }
 
         // Check if guest is already in this event using raw SQL
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
         // Add guest to event using raw SQL
         await prisma.$executeRaw`
           INSERT INTO event_guests (id, eventId, guestId, createdAt) 
-          VALUES (${crypto.randomUUID()}, ${eventId}, ${guest!.id}, datetime('now'))
+          VALUES (${randomUUID()}, ${eventId}, ${guest!.id}, datetime('now'))
         `
 
         // Generate QR code for the new guest

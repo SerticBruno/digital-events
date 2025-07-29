@@ -310,14 +310,36 @@ export default function Dashboard() {
       })
       
       if (response.ok) {
+        const result = await response.json()
+        console.log('Bulk upload result:', result)
+        
+        // Show success message with details
+        const successCount = result.results?.length || 0
+        const errorCount = result.errors?.length || 0
+        
+        let message = `Successfully imported ${successCount} guests`
+        if (errorCount > 0) {
+          message += `, ${errorCount} failed`
+        }
+        
+        alert(message)
         await fetchGuests(selectedEvent.id)
         setShowCSVModal(false)
       } else {
-        throw new Error('Failed to bulk upload guests')
+        // Try to get error details from response
+        let errorMessage = 'Failed to bulk upload guests'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          // If we can't parse JSON, use the status text
+          errorMessage = `${errorMessage}: ${response.statusText}`
+        }
+        throw new Error(errorMessage)
       }
     } catch (error) {
       console.error('Failed to bulk upload guests:', error)
-      alert('Failed to bulk upload guests')
+      alert(error instanceof Error ? error.message : 'Failed to bulk upload guests')
     }
   }
 
@@ -874,14 +896,14 @@ export default function Dashboard() {
             <div className="flex gap-2 ml-4">
               <a
                 href="/scanner"
-                className={`${getButtonClasses('warning')} flex items-center gap-2`}
+                className={getButtonClasses('warning')}
               >
                 <Scan className="w-4 h-4" />
                 <span className="hidden sm:inline">QR Scanner</span>
               </a>
               <button 
                 onClick={() => setShowEventModal(true)}
-                className={`${getButtonClasses('primary')} flex items-center gap-2`}
+                className={getButtonClasses('primary')}
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">New Event</span>
@@ -893,14 +915,14 @@ export default function Dashboard() {
                       setEditingEvent(selectedEvent)
                       setShowEditEventModal(true)
                     }}
-                    className={`${getButtonClasses('outline')} flex items-center gap-2`}
+                    className={getButtonClasses('outline')}
                   >
                     <Edit className="w-4 h-4" />
                     <span className="hidden sm:inline">Edit Event</span>
                   </button>
                   <button
                     onClick={() => deleteEvent(selectedEvent.id)}
-                    className={`${getButtonClasses('danger')} flex items-center gap-2`}
+                    className={getButtonClasses('danger')}
                   >
                     <Trash2 className="w-4 h-4" />
                     <span className="hidden sm:inline">Delete Event</span>
@@ -927,7 +949,7 @@ export default function Dashboard() {
                   <p className="text-gray-600 mb-4">Create your first event to get started with guest management.</p>
                   <button
                     onClick={() => setShowEventModal(true)}
-                    className={`${getButtonClasses('primary')} flex items-center gap-2 mx-auto`}
+                    className={`${getButtonClasses('primary')} mx-auto`}
                   >
                     <Plus className="w-4 h-4" />
                     Create First Event
@@ -1064,21 +1086,21 @@ export default function Dashboard() {
                   <div className="space-y-3">
                     <button
                       onClick={() => setShowGuestModal(true)}
-                      className={`${getButtonClasses('success')} w-full justify-start`}
+                      className={`${getButtonClasses('success')} w-full`}
                     >
                       <Plus className="w-4 h-4" />
                       Add Individual Guest
                     </button>
                     <button
                       onClick={() => setShowCSVModal(true)}
-                      className={`${getButtonClasses('warning')} w-full justify-start`}
+                      className={`${getButtonClasses('warning')} w-full`}
                     >
                       <Upload className="w-4 h-4" />
                       Bulk Import (CSV)
                     </button>
                     <button
                       onClick={() => setShowExistingGuestModal(true)}
-                      className={`${getButtonClasses('outline')} w-full justify-start`}
+                      className={`${getButtonClasses('outline')} w-full`}
                     >
                       <User className="w-4 h-4" />
                       Add Existing Guest
@@ -1100,7 +1122,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => sendEmails('save_the_date', Array.from(selectedGuests))}
                       disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('primary')} w-full justify-start`}
+                      className={`${getButtonClasses('primary')} w-full`}
                     >
                       <Send className="w-4 h-4" />
                       Send Save the Date
@@ -1108,7 +1130,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => sendEmails('invitation', Array.from(selectedGuests))}
                       disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('success')} w-full justify-start`}
+                      className={`${getButtonClasses('success')} w-full`}
                     >
                       <Send className="w-4 h-4" />
                       Send Invitations
@@ -1116,14 +1138,14 @@ export default function Dashboard() {
                     <button
                       onClick={() => sendPlusOneInvitations(Array.from(selectedGuests))}
                       disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('indigo')} w-full justify-start`}
+                      className={`${getButtonClasses('indigo')} w-full`}
                     >
                       <Send className="w-4 h-4" />
                       Plus-One Invitations
                     </button>
                     <button
                       onClick={testEmail}
-                      className={`${getButtonClasses('purple')} w-full justify-start`}
+                      className={`${getButtonClasses('purple')} w-full`}
                     >
                       <Send className="w-4 h-4" />
                       Test Email
@@ -1145,7 +1167,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => generateQRCodes(Array.from(selectedGuests))}
                       disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('teal')} w-full justify-start`}
+                      className={`${getButtonClasses('teal')} w-full`}
                     >
                       <QrCode className="w-4 h-4" />
                       Generate QR Codes
@@ -1153,7 +1175,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => sendEmails('qr_code', Array.from(selectedGuests))}
                       disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('warning')} w-full justify-start`}
+                      className={`${getButtonClasses('warning')} w-full`}
                     >
                       <QrCode className="w-4 h-4" />
                       Send QR Codes
@@ -1161,14 +1183,14 @@ export default function Dashboard() {
                     <button
                       onClick={sendQRCodesToConfirmedAttendees}
                       disabled={sendingEmails}
-                      className={`${getButtonClasses('pink')} w-full justify-start`}
+                      className={`${getButtonClasses('pink')} w-full`}
                     >
                       <QrCode className="w-4 h-4" />
                       QR to Confirmed
                     </button>
                     <a
                       href="/scanner"
-                      className={`${getButtonClasses('orange')} w-full justify-start`}
+                      className={`${getButtonClasses('orange')} w-full`}
                     >
                       <Scan className="w-4 h-4" />
                       QR Scanner

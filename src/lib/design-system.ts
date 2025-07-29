@@ -140,7 +140,7 @@ export const componentStyles = {
   // Button stilovi
   button: {
     base: `
-      inline-flex items-center justify-center
+      inline-flex items-center justify-center gap-2
       px-4 py-2.5
       rounded-lg
       font-medium text-sm
