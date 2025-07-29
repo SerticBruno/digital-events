@@ -291,12 +291,6 @@ export async function sendInvitation(guestId: string, eventId?: string) {
   // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
   const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
   const responseUrl = `${baseUrl}/respond/${guestId}?eventId=${event.id}`
-  
-  // Generate QR code for this guest using the new function that ensures only one active QR code per user
-  if (eventId) {
-    const { generateQRCode } = await import('@/lib/qr')
-    await generateQRCode(guestId, eventId, 'REGULAR')
-  }
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

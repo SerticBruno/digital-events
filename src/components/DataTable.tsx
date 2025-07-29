@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ChevronDown, ChevronUp, Search, Eye, Edit, Trash2, User, Mail, Building, QrCode } from 'lucide-react'
+import { ChevronDown, ChevronUp, Search, Eye, Edit, Trash2, User, Mail, Building, QrCode, Calendar } from 'lucide-react'
 
 interface Column {
   key: string
@@ -317,6 +317,12 @@ export const columnRenderers = {
           <Mail className="w-3 h-3 mr-1" />
           {row.email}
         </div>
+        {row.company && (
+          <div className="text-sm text-gray-400 flex items-center">
+            <Building className="w-3 h-3 mr-1" />
+            {row.company}
+          </div>
+        )}
       </div>
     </div>
   ),
@@ -399,6 +405,34 @@ export const columnRenderers = {
     return (
       <div className="flex items-center">
         <QrCode className="w-4 h-4 text-gray-400 mr-2" />
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.bg} ${config.text}`}>
+          {config.label}
+        </span>
+      </div>
+    )
+  },
+
+  // Save the Date status
+  saveTheDateStatus: (invitation: any) => {
+    if (!invitation) {
+      return (
+        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+          Not Sent
+        </span>
+      )
+    }
+
+    const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+      'SENT': { bg: 'bg-green-100', text: 'text-green-800', label: 'Sent' },
+      'PENDING': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
+      'FAILED': { bg: 'bg-red-100', text: 'text-red-800', label: 'Failed' }
+    }
+
+    const config = statusConfig[invitation.status] || { bg: 'bg-gray-100', text: 'text-gray-800', label: invitation.status || 'Unknown' }
+
+    return (
+      <div className="flex items-center">
+        <Calendar className="w-4 h-4 text-gray-400 mr-2" />
         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.bg} ${config.text}`}>
           {config.label}
         </span>

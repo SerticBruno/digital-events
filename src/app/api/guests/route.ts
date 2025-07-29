@@ -35,8 +35,7 @@ export async function GET(request: NextRequest) {
           include: {
             invitations: {
               where: { eventId },
-              orderBy: { createdAt: 'desc' },
-              take: 1
+              orderBy: { createdAt: 'desc' }
             },
             qrCodes: {
               where: { 
@@ -122,9 +121,10 @@ export async function POST(request: NextRequest) {
         position: position || null,
         phone: phone || null,
         isVip: isVip || false,
+        isPlusOne: false,
         createdAt: new Date(),
         updatedAt: new Date()
-      } as unknown as { id: string; email: string; firstName: string; lastName: string; company: string | null; position: string | null; phone: string | null; isVip: boolean; createdAt: Date; updatedAt: Date; eventId: string }
+      } as unknown as { id: string; email: string; firstName: string; lastName: string; company: string | null; position: string | null; phone: string | null; isVip: boolean; isPlusOne: boolean; createdAt: Date; updatedAt: Date; eventId: string }
     }
 
     // Check if guest is already in this event using raw SQL
@@ -145,15 +145,6 @@ export async function POST(request: NextRequest) {
       INSERT INTO event_guests (id, eventId, guestId, createdAt) 
       VALUES (${randomUUID()}, ${eventId}, ${guest!.id}, datetime('now'))
     `
-
-    // Generate QR code for the new guest
-    try {
-      const { generateQRCode } = await import('@/lib/qr')
-      await generateQRCode(guest!.id, eventId, isVip ? 'VIP' : 'REGULAR')
-    } catch (error) {
-      console.error('Failed to generate QR code for new guest:', error)
-      // Don't fail the guest creation if QR code generation fails
-    }
 
     return NextResponse.json(guest, { status: 201 })
   } catch (error) {

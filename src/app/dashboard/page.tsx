@@ -81,10 +81,13 @@ export default function Dashboard() {
       render: columnRenderers.guest
     },
     {
-      key: 'company',
-      label: 'Company',
+      key: 'saveTheDateStatus',
+      label: 'Save the Date',
       sortable: true,
-      render: columnRenderers.company
+      render: (value: unknown, row: Guest) => {
+        const saveTheDateInvitation = row.invitations?.find(inv => inv.type === 'SAVETHEDATE')
+        return columnRenderers.saveTheDateStatus(saveTheDateInvitation)
+      }
     },
     {
       key: 'response',
@@ -102,7 +105,10 @@ export default function Dashboard() {
       key: 'invitationStatus',
       label: 'Invitation Sent',
       sortable: true,
-      render: (value: unknown, row: Guest) => columnRenderers.status(row.invitations?.[0]?.status)
+      render: (value: unknown, row: Guest) => {
+        const invitationInvitation = row.invitations?.find(inv => inv.type === 'INVITATION')
+        return columnRenderers.status(invitationInvitation?.status)
+      }
     },
     {
       key: 'plusOne',
