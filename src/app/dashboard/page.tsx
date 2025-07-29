@@ -1532,39 +1532,7 @@ export default function Dashboard() {
                 </div>
                 <div className={componentStyles.card.content}>
                   <div className="space-y-3">
-                    <button
-                      onClick={() => sendEmails('qr_code', Array.from(selectedGuests))}
-                      disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('teal')} w-full`}
-                    >
-                      <QrCode className="w-4 h-4" />
-                      Send Regular QR
-                    </button>
-                    <button
-                      onClick={() => sendEmails('plus_one_qr_code', Array.from(selectedGuests))}
-                      disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('indigo')} w-full`}
-                    >
-                      <QrCode className="w-4 h-4" />
-                      Send Regular +1 QR
-                    </button>
-                    <button
-                      onClick={() => sendEmails('vip_qr_code', Array.from(selectedGuests))}
-                      disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('warning')} w-full`}
-                    >
-                      <QrCode className="w-4 h-4" />
-                      Send VIP QR
-                    </button>
-                    <button
-                      onClick={() => sendEmails('vip_plus_one_qr_code', Array.from(selectedGuests))}
-                      disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('purple')} w-full`}
-                    >
-                      <QrCode className="w-4 h-4" />
-                      Send VIP +1 QR
-                    </button>
-                    <div className="pt-3 border-t border-gray-200 space-y-3">
+                    <div className="space-y-3">
                       <button
                         onClick={() => generateQRCodes(Array.from(selectedGuests))}
                         disabled={selectedGuests.size === 0 || sendingEmails}
@@ -1572,14 +1540,6 @@ export default function Dashboard() {
                       >
                         <QrCode className="w-4 h-4" />
                         Generate QR Codes
-                      </button>
-                      <button
-                        onClick={regenerateMissingQRCodes}
-                        disabled={sendingEmails}
-                        className={`${getButtonClasses('orange')} w-full`}
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                        Regenerate Missing QR
                       </button>
                       <button
                         onClick={sendQRCodesToConfirmedAttendees}

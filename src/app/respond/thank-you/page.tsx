@@ -176,8 +176,8 @@ export default function ThankYouPage() {
             
             {response === 'coming_with_plus_one' && (
               <div className="space-y-3 text-gray-600">
-                <p>• We've sent an invitation to your guest at {plusOneEmail}</p>
-                <p>• Both you and your guest will receive QR codes closer to the event</p>
+                <p>• Your guest will accompany you to the event</p>
+                <p>• You will receive a QR code closer to the event</p>
                 <p>• Please arrive 15 minutes before the event starts</p>
               </div>
             )}

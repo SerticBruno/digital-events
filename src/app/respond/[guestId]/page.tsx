@@ -209,7 +209,7 @@ export default function RespondPage() {
         return {
           icon: UserPlus,
           title: 'Thank you for confirming with a guest!',
-          message: invitation?.plusOneEmail ? `We've sent an invitation to ${invitation.plusOneEmail}. We look forward to seeing both of you!` : 'We look forward to seeing both of you!',
+          message: 'We look forward to seeing both of you!',
           color: 'text-blue-600',
           bgColor: 'bg-blue-50',
           iconColor: 'text-blue-500'
@@ -385,8 +385,8 @@ export default function RespondPage() {
                           
                           {selectedResponse === 'coming_with_plus_one' && (
                             <div className="space-y-3 text-gray-600">
-                              <p>• We've sent an invitation to your guest</p>
-                              <p>• Both you and your guest will receive QR codes closer to the event</p>
+                              <p>• Your guest will accompany you to the event</p>
+                              <p>• You will receive a QR code closer to the event</p>
                               <p>• Please arrive 15 minutes before the event starts</p>
                               <p className="text-sm text-blue-600 mt-4">💡 You can update your response anytime by clicking the email links again</p>
                             </div>
@@ -466,7 +466,7 @@ export default function RespondPage() {
                   <div className="space-y-6">
                     <div className="p-4 bg-blue-50 rounded-lg">
                       <h4 className="font-medium text-blue-900 mb-2">Guest Information</h4>
-                      <p className="text-sm text-blue-700">Please provide your guest's email address so we can send them an invitation.</p>
+                      <p className="text-sm text-blue-700">Please provide your guest's email address</p>
                     </div>
 
                     <div className="space-y-4">

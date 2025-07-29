@@ -76,6 +76,13 @@ export async function POST(request: NextRequest) {
             deletedPlusOneEmail = previousPlusOneEmail
             console.log(`Deleted plus-one guest: ${previousPlusOneEmail} because main guest changed response`)
           }
+          
+          // Set canHavePlusOne back to false since they're no longer bringing a plus-one
+          await prisma.$executeRaw`
+            UPDATE guests 
+            SET "canHavePlusOne" = false 
+            WHERE id = ${guestId}
+          `
         } catch (error) {
           console.error('Failed to delete plus-one guest:', error)
           // Continue with the response update even if plus-one deletion fails
@@ -117,6 +124,13 @@ export async function POST(request: NextRequest) {
         // Get the original guest to check if they are VIP
         const originalGuest = await prisma.guest.findUnique({ where: { id: guestId } })
         
+        // Update the original guest's canHavePlusOne status to true since they confirmed they're bringing a plus-one
+        await prisma.$executeRaw`
+          UPDATE guests 
+          SET "canHavePlusOne" = true 
+          WHERE id = ${guestId}
+        `
+        
         // Create new guest for plus-one
         const plusOneGuest = await prisma.guest.upsert({
           where: { email: plusOneEmail },
@@ -148,38 +162,8 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        // Create invitation for plus-one (status will be updated to 'SENT' when email is actually sent)
-        await prisma.invitation.create({
-          data: {
-            guestId: plusOneGuest.id,
-            eventId,
-            type: 'INVITATION',
-            status: 'GUEST',
-            hasPlusOne: true
-          }
-        })
-
-        // Note: QR codes will be generated separately when the "Generate QR Codes" button is clicked
-        // No automatic QR code generation here
-
-        // Send invitation email to plus-one using the email API to ensure proper status tracking
-        try {
-          const emailResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/email/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'invitation',
-              guestIds: [plusOneGuest.id],
-              eventId: eventId
-            })
-          })
-          
-          if (!emailResponse.ok) {
-            console.error('Failed to send invitation to plus-one guest')
-          }
-        } catch (emailError) {
-          console.error('Failed to send invitation to plus-one guest:', emailError)
-        }
+        // Note: Plus-one guests do not receive invitations - they accompany the main guest
+        // QR codes will be generated separately when the "Generate QR Codes" button is clicked
 
       } catch (error) {
         console.error('Failed to create plus-one guest:', error)

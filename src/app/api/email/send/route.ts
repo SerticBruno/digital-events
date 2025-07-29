@@ -160,8 +160,8 @@ export async function POST(request: NextRequest) {
                 where: { id: existingInvitation.id },
                 data: {
                   status: 'SENT',
-                  sentAt: new Date(),
-                  hasPlusOne: type === 'regular_plus_one_invitation' || type === 'vip_plus_one_invitation' // Set hasPlusOne based on invitation type
+                  sentAt: new Date()
+                  // Don't set hasPlusOne here - it should only be set when guest confirms they're bringing a plus-one
                 }
               })
             } else {
@@ -173,10 +173,13 @@ export async function POST(request: NextRequest) {
                   sentAt: new Date(),
                   guestId,
                   eventId,
-                  hasPlusOne: type === 'regular_plus_one_invitation' || type === 'vip_plus_one_invitation'
+                  hasPlusOne: false // Always false when sending invitations - only set to true when guest confirms plus-one
                 }
               })
             }
+            
+            // Note: We don't set canHavePlusOne here because it should only be set when the guest actually confirms they're bringing a plus-one
+            // The canHavePlusOne field will be updated in the respond API when the guest submits their response
           }
           // For other email types (qr_code, survey, etc.), don't update invitation status
 
