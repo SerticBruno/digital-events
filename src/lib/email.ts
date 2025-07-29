@@ -1595,24 +1595,94 @@ export async function sendSurvey(guestId: string, eventId?: string) {
     location: eventData.eventLocation,
     maxGuests: eventData.eventMaxGuests
   }
-  // Use TEST_URL for survey links if available, otherwise fall back to NEXTAUTH_URL
-  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
-  const surveyUrl = `${baseUrl}/survey/${guestId}`
+  // Use Google Form URL for survey (you can replace this with your actual Google Form URL)
+  const surveyUrl = process.env.GOOGLE_FORM_URL || 'https://forms.google.com/your-form-id'
   
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h1>Event Feedback</h1>
-      <p>Dear ${guest.firstName} ${guest.lastName},</p>
-      <p>Thank you for attending <strong>${event.name}</strong>!</p>
-      <p>We would love to hear your feedback about the event. Please take a moment to share your thoughts:</p>
-      <div style="margin: 30px 0;">
-        <a href="${surveyUrl}" style="background: #2196F3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
-          Take Survey
-        </a>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Event Feedback Request</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 2px;">FEEDBACK REQUEST</h1>
+          <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Help us improve future events</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px 30px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #2d3748; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">Thank You!</h2>
+            <div style="width: 60px; height: 3px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto;"></div>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Dear <strong>${guest.firstName} ${guest.lastName}</strong>,
+            </p>
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              Thank you for attending <strong>${event.name}</strong>! We hope you had a wonderful time.
+            </p>
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              We would love to hear your feedback about the event. Your input helps us improve future events and create even better experiences for our guests.
+            </p>
+          </div>
+
+          <!-- Event Details -->
+          <div style="background-color: #edf2f7; border-radius: 12px; padding: 25px; margin: 30px 0;">
+            <h3 style="color: #2d3748; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">Event Details</h3>
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <span style="color: #667eea; font-size: 18px; margin-right: 10px;">📅</span>
+              <span style="color: #4a5568; font-size: 16px;">${event.date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </div>
+            ${event.location ? `
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <span style="color: #667eea; font-size: 18px; margin-right: 10px;">📍</span>
+              <span style="color: #4a5568; font-size: 16px;">${event.location}</span>
+            </div>
+            ` : ''}
+            ${event.description ? `
+            <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+              <span style="color: #667eea; font-size: 18px; margin-right: 10px; margin-top: 2px;">📝</span>
+              <span style="color: #4a5568; font-size: 16px;">${event.description}</span>
+            </div>
+            ` : ''}
+          </div>
+
+          <!-- Survey Button -->
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${surveyUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 18px 36px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 18px; display: inline-block; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              📊 Take Our Survey
+            </a>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="color: #4a5568; font-size: 14px; line-height: 1.6; margin: 0;">
+              The survey will only take a few minutes to complete. Your feedback is invaluable to us!
+            </p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #2d3748; padding: 30px; text-align: center;">
+          <p style="color: #a0aec0; margin: 0; font-size: 14px;">
+            Best regards,<br>
+            <strong style="color: #ffffff;">Event Team</strong>
+          </p>
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #4a5568;">
+            <p style="color: #a0aec0; margin: 0; font-size: 12px;">
+              This is an automated message. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
       </div>
-      <p>Your feedback helps us improve future events.</p>
-      <p>Best regards,<br>Event Team</p>
-    </div>
+    </body>
+    </html>
   `
 
   return sendEmail({

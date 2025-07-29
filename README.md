@@ -15,7 +15,7 @@ A comprehensive event management system for handling large-scale events with dig
 - Save the Date communications (multiple flights)
 - Formal invitations with response tracking
 - QR code delivery for confirmed attendees
-- Post-event survey distribution
+- Post-event survey distribution to attendees who used their QR codes
 
 ### 📊 Dashboard
 - Real-time event statistics
@@ -76,6 +76,9 @@ A comprehensive event management system for handling large-scale events with dig
    # App Configuration
    NEXTAUTH_SECRET="your_nextauth_secret_here"
    NEXTAUTH_URL="http://localhost:3000"
+   
+   # Survey Configuration
+   GOOGLE_FORM_URL="https://forms.google.com/your-form-id"
    ```
 
 4. **Set up the database**
@@ -134,15 +137,16 @@ src/
 - VIP vs Regular types
 
 ### Surveys
-- Post-event feedback
-- Rating and comments
+- Post-event feedback sent to attendees who used their QR codes
+- Google Form integration for easy survey management
+- Survey status tracking in the dashboard
 
 ## Email Workflow
 
 1. **Save the Date** → Sent to all guests
 2. **Formal Invitation** → Sent with response options
 3. **QR Code** → Sent to confirmed attendees
-4. **Survey** → Sent after event attendance
+4. **Survey** → Sent to attendees who used their QR codes (attended the event)
 
 ## Deployment
 
@@ -157,6 +161,7 @@ DATABASE_URL="postgresql://username:password@host:port/database"
 RESEND_API_KEY="re_..."
 NEXTAUTH_SECRET="your-secret"
 NEXTAUTH_URL="https://yourdomain.com"
+GOOGLE_FORM_URL="https://forms.google.com/your-form-id"
 ```
 
 ### Database Migration
@@ -179,6 +184,9 @@ npx prisma db push --accept-data-loss
 
 ### QR Codes
 - `POST /api/qr/validate` - Validate and use QR code
+
+### Surveys
+- `POST /api/surveys/send` - Send surveys to attendees who used their QR codes
 
 ## Contributing
 

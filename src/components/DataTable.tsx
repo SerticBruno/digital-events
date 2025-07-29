@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ChevronDown, ChevronUp, Search, Eye, Edit, Trash2, User, Mail, Building, QrCode, Calendar } from 'lucide-react'
+import { ChevronDown, ChevronUp, Search, Eye, Edit, Trash2, User, Mail, Building, QrCode, Calendar, BarChart3 } from 'lucide-react'
 
 interface Column {
   key: string
@@ -412,6 +412,33 @@ export const columnRenderers = {
     return (
       <div className="flex items-center">
         <QrCode className="w-4 h-4 text-gray-400 mr-2" />
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.bg} ${config.text}`}>
+          {config.label}
+        </span>
+      </div>
+    )
+  },
+
+  // Survey status
+  surveyStatus: (value: any, row: any) => {
+    const surveyInvitation = row.invitations?.find((inv: any) => inv.type === 'SURVEY')
+    let config = { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Not Sent' }
+
+    if (surveyInvitation) {
+      if (surveyInvitation.status === 'SENT') {
+        config = { bg: 'bg-green-100', text: 'text-green-800', label: 'Sent' }
+      } else if (surveyInvitation.status === 'OPENED') {
+        config = { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Opened' }
+      } else if (surveyInvitation.status === 'RESPONDED') {
+        config = { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Responded' }
+      } else {
+        config = { bg: 'bg-yellow-100', text: 'text-yellow-800', label: surveyInvitation.status }
+      }
+    }
+
+    return (
+      <div className="flex items-center">
+        <BarChart3 className="w-4 h-4 text-gray-400 mr-2" />
         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.bg} ${config.text}`}>
           {config.label}
         </span>

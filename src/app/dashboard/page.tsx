@@ -123,6 +123,12 @@ export default function Dashboard() {
       render: columnRenderers.qrStatus
     },
     {
+      key: 'surveyStatus',
+      label: 'Survey Status',
+      sortable: true,
+      render: columnRenderers.surveyStatus
+    },
+    {
       key: 'actions',
       label: 'Actions',
       width: 'w-48',
@@ -837,6 +843,48 @@ export default function Dashboard() {
     }
   }
 
+  const sendSurveysToAttendees = async () => {
+    if (!selectedEvent) {
+      alert('Please select an event first')
+      return
+    }
+
+    setSendingEmails(true)
+    try {
+      const response = await fetch('/api/surveys/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: selectedEvent.id })
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        const successCount = result.totalSent || 0
+        const failureCount = result.totalFailed || 0
+        
+        let message = `Successfully sent surveys to ${successCount} attendees`
+        if (failureCount > 0) {
+          message += `, ${failureCount} failed`
+        }
+        
+        if (result.message) {
+          message = result.message
+        }
+        
+        alert(message)
+        await fetchGuests(selectedEvent.id)
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to send surveys:', error)
+      alert('Failed to send surveys')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
   const deleteSelectedGuests = async () => {
     if (!selectedEvent) return
 
@@ -1493,12 +1541,12 @@ export default function Dashboard() {
                 <div className={componentStyles.card.content}>
                   <div className="space-y-3">
                     <button
-                      onClick={() => sendEmails('post_event_survey', Array.from(selectedGuests))}
-                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      onClick={sendSurveysToAttendees}
+                      disabled={sendingEmails}
                       className={`${getButtonClasses('success')} w-full`}
                     >
                       <BarChart3 className="w-4 h-4" />
-                      Send Survey
+                      Send Survey to Attendees
                     </button>
                     <button
                       onClick={() => sendEmails('feedback_request', Array.from(selectedGuests))}
