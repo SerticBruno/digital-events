@@ -33,6 +33,10 @@ export default function GuestsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredGuests, setFilteredGuests] = useState<Guest[]>([])
 
+  // Animation states for modals
+  const [guestModalVisible, setGuestModalVisible] = useState(false)
+  const [csvModalVisible, setCsvModalVisible] = useState(false)
+
   // Table columns configuration
   const guestColumns = [
     {
@@ -45,7 +49,7 @@ export default function GuestsPage() {
       key: 'contact',
       label: 'Contact',
       sortable: true,
-      render: (value: any, row: any) => (
+      render: (value: unknown, row: Guest) => (
         <div>
           <div className="text-sm text-gray-900">{row.email}</div>
           {row.phone && (
@@ -76,11 +80,11 @@ export default function GuestsPage() {
       key: 'events',
       label: 'Events',
       sortable: false,
-      render: (value: any, row: any) => (
+      render: (value: unknown, row: Guest) => (
         <div>
           {row.eventGuests && row.eventGuests.length > 0 ? (
             <div>
-              {row.eventGuests.map((eg: any) => (
+              {row.eventGuests.map((eg) => (
                 <span key={eg.event.id} className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs mr-1 mb-1">
                   {eg.event.name}
                 </span>
@@ -96,7 +100,7 @@ export default function GuestsPage() {
       key: 'actions',
       label: 'Actions',
       width: 'w-32',
-      render: (value: any, row: any) => (
+      render: (value: unknown, row: Guest) => (
         <button
           onClick={() => deleteGuest(row.id, `${row.firstName} ${row.lastName}`)}
           className="p-1 text-gray-400 hover:text-red-600 transition-colors"
@@ -126,6 +130,25 @@ export default function GuestsPage() {
       setFilteredGuests(filtered)
     }
   }, [guests, searchTerm])
+
+  // Animation triggers for modals
+  useEffect(() => {
+    if (showGuestModal) {
+      const timer = setTimeout(() => setGuestModalVisible(true), 10)
+      return () => clearTimeout(timer)
+    } else {
+      setGuestModalVisible(false)
+    }
+  }, [showGuestModal])
+
+  useEffect(() => {
+    if (showCSVModal) {
+      const timer = setTimeout(() => setCsvModalVisible(true), 10)
+      return () => clearTimeout(timer)
+    } else {
+      setCsvModalVisible(false)
+    }
+  }, [showCSVModal])
 
   const fetchGuests = async () => {
     try {
@@ -199,7 +222,7 @@ export default function GuestsPage() {
         let message = `Guest ${guestName} has been permanently deleted.`
         
         if (result.deletedPlusOnes && result.deletedPlusOnes.length > 0) {
-          const plusOneNames = result.deletedPlusOnes.map((po: any) => `${po.firstName} ${po.lastName} (${po.email})`).join(', ')
+          const plusOneNames = result.deletedPlusOnes.map((po: { firstName: string; lastName: string; email: string }) => `${po.firstName} ${po.lastName} (${po.email})`).join(', ')
           message += `\n\nAlso deleted ${result.deletedPlusOnes.length} plus-one guest(s): ${plusOneNames}`
         }
         
@@ -360,8 +383,8 @@ export default function GuestsPage() {
 
       {/* Guest Modal */}
       {showGuestModal && (
-        <div className={componentStyles.modal.overlay}>
-          <div className={componentStyles.modal.container}>
+        <div className={componentStyles.modal.overlay} data-state={guestModalVisible ? "open" : undefined}>
+          <div className={componentStyles.modal.container} data-state={guestModalVisible ? "open" : undefined}>
             <div className={componentStyles.modal.header}>
               <h2 className="text-2xl font-bold text-gray-900">Add New Guest</h2>
               <button
@@ -380,8 +403,8 @@ export default function GuestsPage() {
 
       {/* CSV Upload Modal */}
       {showCSVModal && (
-        <div className={componentStyles.modal.overlay}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className={componentStyles.modal.overlay} data-state={csvModalVisible ? "open" : undefined}>
+          <div className={`${componentStyles.modal.container} max-w-4xl`} data-state={csvModalVisible ? "open" : undefined}>
             <div className={componentStyles.modal.header}>
               <h2 className="text-2xl font-bold text-gray-900">Bulk Import Guests</h2>
               <button

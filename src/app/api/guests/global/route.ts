@@ -118,7 +118,7 @@ export async function DELETE(request: NextRequest) {
       .map(inv => inv.plusOneEmail)
       .filter(email => email) as string[]
 
-    let deletedPlusOnes: Array<{ email: string; firstName: string; lastName: string }> = []
+    const deletedPlusOnes: Array<{ email: string; firstName: string; lastName: string }> = []
     
     if (plusOneEmails.length > 0) {
       // Find plus-one guests by their emails

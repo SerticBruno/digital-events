@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
       // Check if the guest previously had a plus-one and is now changing their response
       const hadPlusOne = invitation.hasPlusOne
       const previousPlusOneEmail = invitation.plusOneEmail
-      let deletedPlusOneEmail = null
       
       // If guest previously had a plus-one but is now changing to not have one, delete the plus-one guest
       // This handles scenarios like: "coming with plus-one" → "coming alone" or "not coming"

@@ -9,6 +9,8 @@ export interface EmailData {
 
 
 
+
+
 export async function sendTestEmail(to: string) {
   const html = `
     <!DOCTYPE html>
@@ -455,20 +457,98 @@ export async function sendQRCode(guestId: string, eventId?: string) {
     if (qrCodes.length === 0) throw new Error('Failed to generate QR code')
   }
 
+  // Generate QR code image URL from the text code
+  const qrCodeText = qrCodes[0].code
+  console.log('Generating QR code for text:', qrCodeText)
+  console.log('QR code text type:', typeof qrCodeText)
+  console.log('QR code text length:', qrCodeText.length)
+  
+  // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
+  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const qrCodeImageUrl = `${baseUrl}/api/qr/image/${encodeURIComponent(qrCodeText)}`
+
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h1>Your Entry Pass</h1>
-      <p>Dear ${guest.firstName} ${guest.lastName},</p>
-      <p>Thank you for confirming your attendance to <strong>${event.name}</strong>.</p>
-      <p>Please present this QR code at the entrance:</p>
-      <div style="text-align: center; margin: 30px 0;">
-        <img src="data:image/png;base64,${qrCodes[0].code}" alt="QR Code" style="max-width: 200px;" />
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Entry Pass</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 2px;">ENTRY PASS</h1>
+          <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Your digital ticket for the event</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px 30px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #2d3748; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">${event.name}</h2>
+            <div style="width: 60px; height: 3px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto;"></div>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Dear <strong>${guest.firstName} ${guest.lastName}</strong>,
+            </p>
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              Thank you for confirming your attendance. Please present this QR code at the entrance:
+            </p>
+          </div>
+
+          <!-- QR Code Section -->
+          <div style="text-align: center; margin: 40px 0; padding: 30px; background-color: #f7fafc; border-radius: 12px; border: 2px dashed #cbd5e0;">
+            <img src="${qrCodeImageUrl}" alt="QR Code" style="max-width: 200px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" />
+            <p style="color: #718096; font-size: 14px; margin: 15px 0 0 0; font-style: italic;">
+              Scan this QR code at the entrance
+            </p>
+          </div>
+
+          <!-- Event Details -->
+          <div style="background-color: #edf2f7; border-radius: 12px; padding: 25px; margin: 30px 0;">
+            <h3 style="color: #2d3748; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">Event Details</h3>
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <span style="color: #667eea; font-size: 18px; margin-right: 10px;">📅</span>
+              <span style="color: #4a5568; font-size: 16px;">${event.date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</span>
+            </div>
+            ${event.location ? `
+              <div style="display: flex; align-items: center;">
+                <span style="color: #667eea; font-size: 18px; margin-right: 10px;">📍</span>
+                <span style="color: #4a5568; font-size: 16px;">${event.location}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div style="text-align: center; margin: 40px 0;">
+            <div style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 30px; border-radius: 25px; color: #ffffff; font-weight: 600; font-size: 16px;">
+              We look forward to seeing you!
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #2d3748; padding: 30px; text-align: center;">
+          <p style="color: #a0aec0; margin: 0; font-size: 14px;">
+            Best regards,<br>
+            <strong style="color: #ffffff;">Event Team</strong>
+          </p>
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #4a5568;">
+            <p style="color: #a0aec0; margin: 0; font-size: 12px;">
+              This is an automated message. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
       </div>
-      <p><strong>Event Details:</strong></p>
-      <p>Date: ${event.date.toLocaleDateString()}</p>
-      <p>Location: ${event.location || 'TBA'}</p>
-      <p>Best regards,<br>Event Team</p>
-    </div>
+    </body>
+    </html>
   `
 
   return sendEmail({
@@ -716,22 +796,101 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
     if (qrCodes.length === 0) throw new Error('Failed to generate QR code for plus-one')
   }
 
-  const plusOneQRCode = qrCodes[0]
+  // Generate QR code image URL from the text code
+  const qrCodeText = qrCodes[0].code
+  console.log('Generating QR code for plus-one text:', qrCodeText)
+  console.log('Plus-one QR code text type:', typeof qrCodeText)
+  console.log('Plus-one QR code text length:', qrCodeText.length)
+  
+  // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
+  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const qrCodeImageUrl = `${baseUrl}/api/qr/image/${encodeURIComponent(qrCodeText)}`
 
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h1>Your Entry Pass</h1>
-      <p>Dear ${plusOneName},</p>
-      <p>Thank you for confirming your attendance to <strong>${event.name}</strong> as a guest of ${guest.firstName} ${guest.lastName}.</p>
-      <p>Please present this QR code at the entrance:</p>
-      <div style="text-align: center; margin: 30px 0;">
-        <img src="data:image/png;base64,${plusOneQRCode.code}" alt="QR Code" style="max-width: 200px;" />
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Entry Pass</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 2px;">ENTRY PASS</h1>
+          <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Your digital ticket for the event</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px 30px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #2d3748; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">${event.name}</h2>
+            <div style="width: 60px; height: 3px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto;"></div>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Dear <strong>${plusOneName}</strong>,
+            </p>
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              Thank you for confirming your attendance to <strong>${event.name}</strong> as a guest of <strong>${guest.firstName} ${guest.lastName}</strong>.
+            </p>
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              Please present this QR code at the entrance:
+            </p>
+          </div>
+
+          <!-- QR Code Section -->
+          <div style="text-align: center; margin: 40px 0; padding: 30px; background-color: #f7fafc; border-radius: 12px; border: 2px dashed #cbd5e0;">
+            <img src="${qrCodeImageUrl}" alt="QR Code" style="max-width: 200px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" />
+            <p style="color: #718096; font-size: 14px; margin: 15px 0 0 0; font-style: italic;">
+              Scan this QR code at the entrance
+            </p>
+          </div>
+
+          <!-- Event Details -->
+          <div style="background-color: #edf2f7; border-radius: 12px; padding: 25px; margin: 30px 0;">
+            <h3 style="color: #2d3748; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">Event Details</h3>
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <span style="color: #667eea; font-size: 18px; margin-right: 10px;">📅</span>
+              <span style="color: #4a5568; font-size: 16px;">${event.date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</span>
+            </div>
+            ${event.location ? `
+              <div style="display: flex; align-items: center;">
+                <span style="color: #667eea; font-size: 18px; margin-right: 10px;">📍</span>
+                <span style="color: #4a5568; font-size: 16px;">${event.location}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div style="text-align: center; margin: 40px 0;">
+            <div style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 30px; border-radius: 25px; color: #ffffff; font-weight: 600; font-size: 16px;">
+              We look forward to seeing you!
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #2d3748; padding: 30px; text-align: center;">
+          <p style="color: #a0aec0; margin: 0; font-size: 14px;">
+            Best regards,<br>
+            <strong style="color: #ffffff;">Event Team</strong>
+          </p>
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #4a5568;">
+            <p style="color: #a0aec0; margin: 0; font-size: 12px;">
+              This is an automated message. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
       </div>
-      <p><strong>Event Details:</strong></p>
-      <p>Date: ${event.date.toLocaleDateString()}</p>
-      <p>Location: ${event.location || 'TBA'}</p>
-      <p>Best regards,<br>Event Team</p>
-    </div>
+    </body>
+    </html>
   `
 
   return sendEmail({

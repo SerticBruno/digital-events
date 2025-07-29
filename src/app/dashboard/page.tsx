@@ -7,7 +7,7 @@ import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
 import AddExistingGuest from '@/components/AddExistingGuest'
 import DataTable, { columnRenderers } from '@/components/DataTable'
-import { getButtonClasses, getInputClasses, componentStyles } from '@/lib/design-system'
+import { getButtonClasses, componentStyles } from '@/lib/design-system'
 
 interface Event {
   id: string
@@ -65,6 +65,13 @@ export default function Dashboard() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
 
+  // Animation states for modals
+  const [eventModalVisible, setEventModalVisible] = useState(false)
+  const [guestModalVisible, setGuestModalVisible] = useState(false)
+  const [csvModalVisible, setCsvModalVisible] = useState(false)
+  const [editEventModalVisible, setEditEventModalVisible] = useState(false)
+  const [editGuestModalVisible, setEditGuestModalVisible] = useState(false)
+
   // Table columns configuration
   const guestColumns = [
     {
@@ -83,7 +90,7 @@ export default function Dashboard() {
       key: 'response',
       label: 'Status',
       sortable: true,
-      render: (value: any, row: any) => columnRenderers.status(row.invitations?.[0]?.response)
+      render: (value: unknown, row: Guest) => columnRenderers.status(row.invitations?.[0]?.response)
     },
     {
       key: 'isVip',
@@ -95,7 +102,7 @@ export default function Dashboard() {
       key: 'invitationStatus',
       label: 'Invitation Sent',
       sortable: true,
-      render: (value: any, row: any) => columnRenderers.status(row.invitations?.[0]?.status)
+      render: (value: unknown, row: Guest) => columnRenderers.status(row.invitations?.[0]?.status)
     },
     {
       key: 'plusOne',
@@ -113,7 +120,7 @@ export default function Dashboard() {
       key: 'actions',
       label: 'Actions',
       width: 'w-48',
-      render: (value: any, row: any) => (
+      render: (value: unknown, row: Guest) => (
         <div className="flex items-center space-x-2">
           <a
             href={`/respond/${row.id}?eventId=${selectedEvent?.id}`}
@@ -155,6 +162,52 @@ export default function Dashboard() {
       fetchGuests(selectedEvent.id)
     }
   }, [selectedEvent])
+
+  // Animation triggers for modals
+  useEffect(() => {
+    if (showEventModal) {
+      const timer = setTimeout(() => setEventModalVisible(true), 10)
+      return () => clearTimeout(timer)
+    } else {
+      setEventModalVisible(false)
+    }
+  }, [showEventModal])
+
+  useEffect(() => {
+    if (showGuestModal) {
+      const timer = setTimeout(() => setGuestModalVisible(true), 10)
+      return () => clearTimeout(timer)
+    } else {
+      setGuestModalVisible(false)
+    }
+  }, [showGuestModal])
+
+  useEffect(() => {
+    if (showCSVModal) {
+      const timer = setTimeout(() => setCsvModalVisible(true), 10)
+      return () => clearTimeout(timer)
+    } else {
+      setCsvModalVisible(false)
+    }
+  }, [showCSVModal])
+
+  useEffect(() => {
+    if (showEditEventModal) {
+      const timer = setTimeout(() => setEditEventModalVisible(true), 10)
+      return () => clearTimeout(timer)
+    } else {
+      setEditEventModalVisible(false)
+    }
+  }, [showEditEventModal])
+
+  useEffect(() => {
+    if (showEditGuestModal) {
+      const timer = setTimeout(() => setEditGuestModalVisible(true), 10)
+      return () => clearTimeout(timer)
+    } else {
+      setEditGuestModalVisible(false)
+    }
+  }, [showEditGuestModal])
 
   // Auto-refresh guests every 30 seconds
   useEffect(() => {
@@ -268,15 +321,7 @@ export default function Dashboard() {
     }
   }
 
-  const toggleGuestSelection = (guestId: string) => {
-    const newSelected = new Set(selectedGuests)
-    if (newSelected.has(guestId)) {
-      newSelected.delete(guestId)
-    } else {
-      newSelected.add(guestId)
-    }
-    setSelectedGuests(newSelected)
-  }
+
 
   const selectAllGuests = () => {
     setSelectedGuests(new Set(guests.map(g => g.id)))
@@ -748,7 +793,7 @@ export default function Dashboard() {
           if (data.deletedPlusOnes && data.deletedPlusOnes.length > 0) {
             totalPlusOnesDeleted += data.deletedPlusOnes.length
           }
-        } catch (e) {
+        } catch {
           // Ignore JSON parsing errors
         }
       }
@@ -827,14 +872,6 @@ export default function Dashboard() {
               )}
             </div>
             <div className="flex gap-2 ml-4">
-              <button
-                onClick={() => selectedEvent && fetchGuests(selectedEvent.id)}
-                disabled={refreshing}
-                className={`${getButtonClasses('secondary')} flex items-center gap-2`}
-              >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-              </button>
               <a
                 href="/scanner"
                 className={`${getButtonClasses('warning')} flex items-center gap-2`}
@@ -1221,8 +1258,8 @@ export default function Dashboard() {
 
       {/* Event Modal */}
       {showEventModal && (
-        <div className={componentStyles.modal.overlay}>
-          <div className={componentStyles.modal.container}>
+        <div className={componentStyles.modal.overlay} data-state={eventModalVisible ? "open" : undefined}>
+          <div className={componentStyles.modal.container} data-state={eventModalVisible ? "open" : undefined}>
             <div className={componentStyles.modal.header}>
               <h2 className="text-2xl font-bold text-gray-900">Create New Event</h2>
               <button
@@ -1241,8 +1278,8 @@ export default function Dashboard() {
 
       {/* Guest Modal */}
       {showGuestModal && selectedEvent && (
-        <div className={componentStyles.modal.overlay}>
-          <div className={componentStyles.modal.container}>
+        <div className={componentStyles.modal.overlay} data-state={guestModalVisible ? "open" : undefined}>
+          <div className={componentStyles.modal.container} data-state={guestModalVisible ? "open" : undefined}>
             <div className={componentStyles.modal.header}>
               <h2 className="text-2xl font-bold text-gray-900">Add New Guest</h2>
               <button
@@ -1261,8 +1298,8 @@ export default function Dashboard() {
 
       {/* CSV Upload Modal */}
       {showCSVModal && selectedEvent && (
-        <div className={componentStyles.modal.overlay}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className={componentStyles.modal.overlay} data-state={csvModalVisible ? "open" : undefined}>
+          <div className={`${componentStyles.modal.container} max-w-4xl`} data-state={csvModalVisible ? "open" : undefined}>
             <div className={componentStyles.modal.header}>
               <h2 className="text-2xl font-bold text-gray-900">Bulk Import Guests</h2>
               <button
@@ -1293,8 +1330,8 @@ export default function Dashboard() {
 
       {/* Edit Event Modal */}
       {showEditEventModal && editingEvent && (
-        <div className={componentStyles.modal.overlay}>
-          <div className={componentStyles.modal.container}>
+        <div className={componentStyles.modal.overlay} data-state={editEventModalVisible ? "open" : undefined}>
+          <div className={componentStyles.modal.container} data-state={editEventModalVisible ? "open" : undefined}>
             <div className={componentStyles.modal.header}>
               <h2 className="text-2xl font-bold text-gray-900">Edit Event</h2>
               <button
@@ -1324,8 +1361,8 @@ export default function Dashboard() {
 
       {/* Edit Guest Modal */}
       {showEditGuestModal && editingGuest && (
-        <div className={componentStyles.modal.overlay}>
-          <div className={componentStyles.modal.container}>
+        <div className={componentStyles.modal.overlay} data-state={editGuestModalVisible ? "open" : undefined}>
+          <div className={componentStyles.modal.container} data-state={editGuestModalVisible ? "open" : undefined}>
             <div className={componentStyles.modal.header}>
               <h2 className="text-2xl font-bold text-gray-900">Edit Guest</h2>
               <button

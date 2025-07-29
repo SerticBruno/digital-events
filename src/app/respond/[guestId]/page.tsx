@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { CheckCircle, XCircle, UserPlus, Calendar, MapPin } from 'lucide-react'
-import { InvitationData } from '@/lib/types'
 
 interface Guest {
   id: string
@@ -41,7 +40,7 @@ export default function RespondPage() {
   const [error, setError] = useState<string | null>(null)
   const [plusOneEmail, setPlusOneEmail] = useState('')
   const [showPlusOneForm, setShowPlusOneForm] = useState(false)
-  const [invitation, setInvitation] = useState<InvitationData | null>(null)
+
 
   useEffect(() => {
     if (guestId) {
@@ -75,7 +74,6 @@ export default function RespondPage() {
       const data = await response.json()
       setGuest(data.guest)
       setEvent(data.event)
-      setInvitation(data.invitation)
     } catch (error) {
       console.error('Failed to fetch guest data:', error)
       setError('Guest not found or invitation has expired')
@@ -110,7 +108,7 @@ export default function RespondPage() {
         throw new Error('Failed to submit response')
       }
 
-      const result = await response.json()
+      await response.json()
       
 
       setSubmitted(true)

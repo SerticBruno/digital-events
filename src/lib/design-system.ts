@@ -212,10 +212,11 @@ export const componentStyles = {
   modal: {
     overlay: `
       fixed inset-0 
-      bg-black bg-opacity-50 
+      bg-black/20 backdrop-blur-sm
       flex items-center justify-center 
       z-50
       p-4
+      modal-overlay
     `,
     container: `
       bg-white
@@ -224,6 +225,7 @@ export const componentStyles = {
       w-full max-w-2xl
       max-h-[90vh]
       overflow-y-auto
+      modal-container
     `,
     header: `
       flex justify-between items-center

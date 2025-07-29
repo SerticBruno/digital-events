@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ChevronDown, ChevronUp, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, User, Mail, Building, Calendar, QrCode } from 'lucide-react'
-import { getButtonClasses, componentStyles } from '@/lib/design-system'
+import { ChevronDown, ChevronUp, Search, Eye, Edit, Trash2, User, Mail, Building, QrCode } from 'lucide-react'
 
 interface Column {
   key: string

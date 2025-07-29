@@ -42,3 +42,27 @@ input[type="submit"]:disabled,
 input[type="reset"]:disabled {
   cursor: not-allowed;
 }
+
+/* Modal animations */
+.modal-container {
+  transform: scale(0.95);
+  opacity: 0;
+  transition: all 0.3s ease-out;
+}
+
+.modal-container[data-state="open"] {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Modal overlay fade-in */
+.modal-overlay {
+  opacity: 0;
+  backdrop-filter: blur(0px);
+  transition: opacity 0.3s ease-in-out, backdrop-filter 0.3s ease-in-out;
+}
+
+.modal-overlay[data-state="open"] {
+  opacity: 1;
+  backdrop-filter: blur(4px);
+}

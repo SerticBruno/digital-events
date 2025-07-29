@@ -31,6 +31,7 @@ export default function AddExistingGuest({ eventId, onGuestAdded, onClose }: Add
   const [isSearching, setIsSearching] = useState(false)
   const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set())
   const [isAdding, setIsAdding] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
 
   const searchGuests = useCallback(async () => {
     if (!searchTerm.trim()) {
@@ -76,6 +77,14 @@ export default function AddExistingGuest({ eventId, onGuestAdded, onClose }: Add
   useEffect(() => {
     searchGuests()
   }, [searchGuests])
+
+  // Trigger animation when component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsVisible(true)
+    }, 10)
+    return () => clearTimeout(timer)
+  }, [])
 
   const toggleGuestSelection = (guestId: string) => {
     const newSelected = new Set(selectedGuests)
@@ -129,8 +138,8 @@ export default function AddExistingGuest({ eventId, onGuestAdded, onClose }: Add
   }
 
   return (
-    <div className={componentStyles.modal.overlay}>
-      <div className={componentStyles.modal.container}>
+    <div className={componentStyles.modal.overlay} data-state={isVisible ? "open" : undefined}>
+      <div className={componentStyles.modal.container} data-state={isVisible ? "open" : undefined}>
         <div className={componentStyles.modal.header}>
           <h2 className="text-2xl font-bold text-gray-900">Add Existing Guests</h2>
           <button
