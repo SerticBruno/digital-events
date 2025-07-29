@@ -1448,7 +1448,7 @@ export default function Dashboard() {
                 <div className={componentStyles.card.header}>
                   <h3 className="text-lg font-medium text-gray-900 flex items-center">
                     <Calendar className="w-5 h-5 mr-2" />
-                    1. Save the Date
+                    Save the Date
                   </h3>
                 </div>
                 <div className={componentStyles.card.content}>
@@ -1477,7 +1477,7 @@ export default function Dashboard() {
                 <div className={componentStyles.card.header}>
                   <h3 className="text-lg font-medium text-gray-900 flex items-center">
                     <Mail className="w-5 h-5 mr-2" />
-                    2. Slanje pozivnica
+                    Invitation Sending
                   </h3>
                 </div>
                 <div className={componentStyles.card.content}>
@@ -1527,7 +1527,7 @@ export default function Dashboard() {
                 <div className={componentStyles.card.header}>
                   <h3 className="text-lg font-medium text-gray-900 flex items-center">
                     <QrCode className="w-5 h-5 mr-2" />
-                    3. Slanje QR kodova
+                    QR Code Sending
                   </h3>
                 </div>
                 <div className={componentStyles.card.content}>
@@ -1567,7 +1567,7 @@ export default function Dashboard() {
                 <div className={componentStyles.card.header}>
                   <h3 className="text-lg font-medium text-gray-900 flex items-center">
                     <BarChart3 className="w-5 h-5 mr-2" />
-                    4. Post-event anketa
+                    Post-event Survey
                   </h3>
                 </div>
                 <div className={componentStyles.card.content}>
