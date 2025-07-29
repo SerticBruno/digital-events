@@ -90,6 +90,17 @@ export async function POST(request: NextRequest) {
           VALUES (${randomUUID()}, ${eventId}, ${guest!.id}, datetime('now'))
         `
 
+        // Create invitation with PENDING status for the new guest (not sent yet)
+        await prisma.invitation.create({
+          data: {
+            guestId: guest!.id,
+            eventId,
+            type: 'INVITATION',
+            status: 'PENDING',
+            hasPlusOne: false
+          }
+        })
+
         results.push({
           id: guest!.id,
           email: guest!.email,

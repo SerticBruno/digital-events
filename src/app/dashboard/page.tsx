@@ -81,6 +81,12 @@ export default function Dashboard() {
       render: columnRenderers.guest
     },
     {
+      key: 'isVip',
+      label: 'Type',
+      sortable: true,
+      render: columnRenderers.vip
+    },
+    {
       key: 'saveTheDateStatus',
       label: 'Save the Date',
       sortable: true,
@@ -90,18 +96,6 @@ export default function Dashboard() {
       }
     },
     {
-      key: 'response',
-      label: 'Status',
-      sortable: true,
-      render: (value: unknown, row: Guest) => columnRenderers.status(row.invitations?.[0]?.response)
-    },
-    {
-      key: 'isVip',
-      label: 'Type',
-      sortable: true,
-      render: columnRenderers.vip
-    },
-    {
       key: 'invitationStatus',
       label: 'Invitation Sent',
       sortable: true,
@@ -109,6 +103,12 @@ export default function Dashboard() {
         const invitationInvitation = row.invitations?.find(inv => inv.type === 'INVITATION')
         return columnRenderers.status(invitationInvitation?.status)
       }
+    },
+    {
+      key: 'response',
+      label: 'Status',
+      sortable: true,
+      render: (value: unknown, row: Guest) => columnRenderers.status(row.invitations?.[0]?.response)
     },
     {
       key: 'plusOne',
@@ -521,68 +521,79 @@ export default function Dashboard() {
 
     setSendingEmails(true)
     try {
-      // Send QR codes to main guests
-      const mainGuestIds = confirmedGuests.map(g => g.id)
-      const response = await fetch('/api/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          type: 'qr_code', 
-          guestIds: mainGuestIds, 
-          eventId: selectedEvent.id
-        })
-      })
-      const result = await response.json()
+      // Send QR codes only to guests who are coming alone (not with plus-ones)
+      const guestsComingAlone = confirmedGuests.filter(guest => 
+        guest.invitations[0]?.response === 'COMING'
+      )
       
-      if (response.ok) {
-        let successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
-        let failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
-        
-        // Send QR codes to plus-one guests
-        const plusOneGuests = confirmedGuests.filter(guest => 
-          guest.invitations[0]?.response === 'COMING_WITH_PLUS_ONE' && 
-          guest.invitations[0]?.plusOneEmail
-        )
-
-        if (plusOneGuests.length > 0) {
-          const plusOneEmails = plusOneGuests.map(g => g.invitations[0]?.plusOneEmail || '')
-          const plusOneNames = plusOneGuests.map(g => g.invitations[0]?.plusOneName || `Guest of ${g.firstName} ${g.lastName}`)
-          
-          const plusOneResponse = await fetch('/api/email/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              type: 'plus_one_qr_code', 
-              guestIds: plusOneGuests.map(g => g.id), 
-              eventId: selectedEvent.id,
-              plusOneEmails,
-              plusOneNames
-            })
+      let successCount = 0
+      let failureCount = 0
+      
+      // Send QR codes to guests coming alone
+      if (guestsComingAlone.length > 0) {
+        const mainGuestIds = guestsComingAlone.map(g => g.id)
+        const response = await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            type: 'qr_code', 
+            guestIds: mainGuestIds, 
+            eventId: selectedEvent.id
           })
-          const plusOneResult = await plusOneResponse.json()
+        })
+        const result = await response.json()
+        
+        if (response.ok) {
+          successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+          failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        } else {
+          failureCount = guestsComingAlone.length
+        }
+      }
+      
+      // Send QR codes to plus-one guests
+      const plusOneGuests = confirmedGuests.filter(guest => 
+        guest.invitations[0]?.response === 'COMING_WITH_PLUS_ONE' && 
+        guest.invitations[0]?.plusOneEmail
+      )
+
+      if (plusOneGuests.length > 0) {
+        const plusOneEmails = plusOneGuests.map(g => g.invitations[0]?.plusOneEmail || '')
+        const plusOneNames = plusOneGuests.map(g => g.invitations[0]?.plusOneName || `Guest of ${g.firstName} ${g.lastName}`)
+        
+        const plusOneResponse = await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            type: 'plus_one_qr_code', 
+            guestIds: plusOneGuests.map(g => g.id), 
+            eventId: selectedEvent.id,
+            plusOneEmails,
+            plusOneNames
+          })
+        })
+        const plusOneResult = await plusOneResponse.json()
+        
+        if (plusOneResponse.ok) {
+          const plusOneSuccessCount = plusOneResult.results?.filter((r: { success: boolean }) => r.success).length || 0
+          const plusOneFailureCount = plusOneResult.results?.filter((r: { success: boolean }) => !r.success).length || 0
           
-          if (plusOneResponse.ok) {
-            const plusOneSuccessCount = plusOneResult.results?.filter((r: { success: boolean }) => r.success).length || 0
-            const plusOneFailureCount = plusOneResult.results?.filter((r: { success: boolean }) => !r.success).length || 0
-            
-            successCount += plusOneSuccessCount
-            failureCount += plusOneFailureCount
-          } else {
-            failureCount += plusOneGuests.length
-          }
+          successCount += plusOneSuccessCount
+          failureCount += plusOneFailureCount
+        } else {
+          failureCount += plusOneGuests.length
         }
-        
-        let message = `Successfully sent QR codes to ${successCount} attendees`
-        if (failureCount > 0) {
-          message += `, ${failureCount} failed`
-        }
-        
-        alert(message)
-        if (selectedEvent) {
-          fetchGuests(selectedEvent.id)
-        }
-      } else {
-        alert(`Error: ${result.error}`)
+      }
+      
+      let message = `Successfully sent QR codes to ${successCount} attendees`
+      if (failureCount > 0) {
+        message += `, ${failureCount} failed`
+      }
+      
+      alert(message)
+      clearSelection()
+      if (selectedEvent) {
+        fetchGuests(selectedEvent.id)
       }
     } catch (error) {
       console.error('Failed to send QR codes to confirmed attendees:', error)

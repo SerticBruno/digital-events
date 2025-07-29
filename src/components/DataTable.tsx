@@ -343,7 +343,8 @@ export const columnRenderers = {
       'NOT_COMING': { bg: 'bg-red-100', text: 'text-red-800', label: 'Not Coming' },
       'SENT': { bg: 'bg-green-100', text: 'text-green-800', label: 'Sent' },
       'RESPONDED': { bg: 'bg-green-100', text: 'text-green-800', label: 'Responded' },
-      'PENDING': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
+      'PENDING': { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Not Sent' },
+      'GUEST': { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Guest' },
       'USED': { bg: 'bg-red-100', text: 'text-red-800', label: 'Used' },
       'CREATED': { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' },
       'INACTIVE': { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Inactive' }
@@ -424,7 +425,8 @@ export const columnRenderers = {
 
     const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
       'SENT': { bg: 'bg-green-100', text: 'text-green-800', label: 'Sent' },
-      'PENDING': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
+      'PENDING': { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Not Sent' },
+      'GUEST': { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Guest' },
       'FAILED': { bg: 'bg-red-100', text: 'text-red-800', label: 'Failed' }
     }
 

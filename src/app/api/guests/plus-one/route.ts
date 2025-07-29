@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         data: { hasPlusOne }
       })
     } else {
-      // Create new invitation
+      // Create new invitation with PENDING status for regular guests
       invitation = await prisma.invitation.create({
         data: {
           guestId,

@@ -68,7 +68,7 @@ model EventGuest {
 model Invitation {
   id        String   @id @default(cuid())
   type      String   // SAVE_THE_DATE, INVITATION, QR_CODE, SURVEY
-  status    String   @default("PENDING") // PENDING, SENT, OPENED, RESPONDED, FAILED
+  status    String   @default("PENDING") // PENDING, SENT, OPENED, RESPONDED, FAILED, GUEST
   sentAt    DateTime?
   openedAt  DateTime?
   respondedAt DateTime?

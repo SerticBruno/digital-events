@@ -136,10 +136,10 @@ export default function RespondPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading invitation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading invitation...</p>
         </div>
       </div>
     )
@@ -193,20 +193,20 @@ export default function RespondPage() {
 
   if (!guest || !event) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Invitation Not Found</h1>
-          <p className="text-gray-600">This invitation may have expired or is invalid.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Invitation Not Found</h1>
+          <p className="text-gray-600 dark:text-gray-400">This invitation may have expired or is invalid.</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-8 text-center">
             <h1 className="text-3xl font-bold text-white mb-2">You&apos;re Invited!</h1>
@@ -216,17 +216,17 @@ export default function RespondPage() {
           {/* Event Details */}
           <div className="p-6">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">{event.name}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">{event.name}</h2>
               {event.description && (
-                <p className="text-gray-600 mb-6">{event.description}</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">{event.description}</p>
               )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <Calendar className="w-5 h-5 text-blue-600 mr-3" />
                   <div className="text-left">
-                    <p className="text-sm text-gray-500">Date</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Date</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">
                       {new Date(event.date).toLocaleDateString('en-US', {
                         weekday: 'long',
                         year: 'numeric',
@@ -238,11 +238,11 @@ export default function RespondPage() {
                 </div>
                 
                 {event.location && (
-                  <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <MapPin className="w-5 h-5 text-blue-600 mr-3" />
                     <div className="text-left">
-                      <p className="text-sm text-gray-500">Location</p>
-                      <p className="font-semibold text-gray-900">{event.location}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Location</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{event.location}</p>
                     </div>
                   </div>
                 )}
@@ -250,13 +250,13 @@ export default function RespondPage() {
             </div>
 
             {/* Guest Info */}
-            <div className="bg-blue-50 rounded-lg p-4 mb-8">
-              <p className="text-sm text-blue-600 mb-1">Invited Guest</p>
-              <p className="font-semibold text-gray-900">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-8">
+              <p className="text-sm text-blue-600 dark:text-blue-400 mb-1">Invited Guest</p>
+              <p className="font-semibold text-gray-900 dark:text-gray-100">
                 {guest.firstName} {guest.lastName}
               </p>
               {guest.company && (
-                <p className="text-sm text-gray-600">{guest.company}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{guest.company}</p>
               )}
             </div>
 
@@ -265,7 +265,7 @@ export default function RespondPage() {
             {/* Response Options */}
             {!showPlusOneForm ? (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 text-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-6">
                   Will you be attending?
                 </h3>
                 
@@ -298,12 +298,12 @@ export default function RespondPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 text-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-6">
                   Please provide your guest&apos;s email
                 </h3>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Guest&apos;s Email
                   </label>
                   <input
@@ -311,7 +311,7 @@ export default function RespondPage() {
                     value={plusOneEmail}
                     onChange={(e) => setPlusOneEmail(e.target.value)}
                     placeholder="Enter your guest&apos;s email address"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
                   />
                 </div>
 
@@ -336,7 +336,7 @@ export default function RespondPage() {
             {submitting && (
               <div className="text-center mt-6">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-sm text-gray-600">Submitting your response...</p>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Submitting your response...</p>
               </div>
             )}
           </div>

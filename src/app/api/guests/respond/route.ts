@@ -114,17 +114,21 @@ export async function POST(request: NextRequest) {
     // If guest is coming with a plus-one, create a new guest and send invitation
     if (response === 'COMING_WITH_PLUS_ONE' && plusOneEmail) {
       try {
+        // Get the original guest to check if they are VIP
+        const originalGuest = await prisma.guest.findUnique({ where: { id: guestId } })
+        
         // Create new guest for plus-one
         const plusOneGuest = await prisma.guest.upsert({
           where: { email: plusOneEmail },
           update: {
-            isPlusOne: true
+            isPlusOne: true,
+            isVip: originalGuest?.isVip || false
           },
           create: {
             email: plusOneEmail,
             firstName: 'Guest',
-            lastName: 'of ' + (await prisma.guest.findUnique({ where: { id: guestId } }))?.firstName || 'Guest',
-            isVip: false,
+            lastName: 'of ' + originalGuest?.firstName || 'Guest',
+            isVip: originalGuest?.isVip || false,
             isPlusOne: true
           }
         })
@@ -144,30 +148,38 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        // Create invitation for plus-one
+        // Create invitation for plus-one (status will be updated to 'SENT' when email is actually sent)
         await prisma.invitation.create({
           data: {
             guestId: plusOneGuest.id,
             eventId,
             type: 'INVITATION',
-            status: 'SENT',
-            sentAt: new Date(),
-            hasPlusOne: false
+            status: 'GUEST',
+            hasPlusOne: true
           }
         })
 
-        // Generate QR codes for both guests using the new function that ensures only one active QR code per user
-        const { generateQRCode } = await import('@/lib/qr')
-        
-        // Generate QR code for the original guest (this will deactivate any existing active QR codes)
-        await generateQRCode(guestId, eventId, 'REGULAR')
-        
-        // Generate QR code for the plus-one guest
-        await generateQRCode(plusOneGuest.id, eventId, 'REGULAR')
+        // Note: QR codes will be generated separately when the "Generate QR Codes" button is clicked
+        // No automatic QR code generation here
 
-        // Send invitation email to plus-one
-        const { sendInvitation } = await import('@/lib/email')
-        await sendInvitation(plusOneGuest.id, eventId)
+        // Send invitation email to plus-one using the email API to ensure proper status tracking
+        try {
+          const emailResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/email/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'invitation',
+              guestIds: [plusOneGuest.id],
+              eventId: eventId
+            })
+          })
+          
+          if (!emailResponse.ok) {
+            console.error('Failed to send invitation to plus-one guest')
+          }
+        } catch (emailError) {
+          console.error('Failed to send invitation to plus-one guest:', emailError)
+        }
 
       } catch (error) {
         console.error('Failed to create plus-one guest:', error)
