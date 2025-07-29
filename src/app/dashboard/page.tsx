@@ -605,6 +605,52 @@ export default function Dashboard() {
     }
   }
 
+  const sendQRCodesBasedOnResponse = async () => {
+    if (!selectedEvent) {
+      alert('Please select an event first')
+      return
+    }
+
+    setSendingEmails(true)
+    try {
+      const response = await fetch('/api/qr/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          eventId: selectedEvent.id
+        })
+      })
+
+      const result = await response.json()
+      
+      if (response.ok) {
+        const { summary } = result
+        let message = `Processed ${summary.totalGuests} guests.\n`
+        message += `Generated ${summary.qrCodesGenerated} QR codes.\n`
+        message += `Sent ${summary.emailsSent} emails.\n`
+        message += `Success: ${summary.successCount}, Skipped: ${summary.skippedCount}, Failed: ${summary.failedCount}`
+        
+        if (summary.qrGeneratedEmailFailedCount > 0) {
+          message += `\nQR generated but email failed: ${summary.qrGeneratedEmailFailedCount}`
+        }
+        
+        alert(message)
+        
+        // Refresh guest list to show updated QR codes
+        if (selectedEvent) {
+          fetchGuests(selectedEvent.id)
+        }
+      } else {
+        alert(`Failed to send QR codes: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to send QR codes based on response:', error)
+      alert('Failed to send QR codes based on response')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
   const editEvent = async (data: { id: string; name: string; date: string; location?: string; description?: string }) => {
     try {
       const response = await fetch('/api/events', {
@@ -1422,6 +1468,14 @@ export default function Dashboard() {
                       >
                         <QrCode className="w-4 h-4" />
                         QR to Confirmed
+                      </button>
+                      <button
+                        onClick={sendQRCodesBasedOnResponse}
+                        disabled={sendingEmails}
+                        className={`${getButtonClasses('purple')} w-full`}
+                      >
+                        <QrCode className="w-4 h-4" />
+                        Send QR Based on Response
                       </button>
                     </div>
                   </div>

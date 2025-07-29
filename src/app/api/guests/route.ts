@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
             qrCodes: {
               where: { 
                 eventId,
-                status: 'CREATED'
+                status: { in: ['CREATED', 'ACTIVE', 'USED'] }
               },
               orderBy: { createdAt: 'desc' },
               take: 1

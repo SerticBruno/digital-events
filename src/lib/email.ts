@@ -1021,14 +1021,14 @@ export async function sendQRCode(guestId: string, eventId?: string) {
       FROM qr_codes
       WHERE "guestId" = ${guestId}
       AND "eventId" = ${eventId}
-      AND status = 'CREATED'
+      AND status = 'ACTIVE'
     `
   } else {
     qrCodes = await prisma.$queryRaw`
       SELECT code, status
       FROM qr_codes
       WHERE "guestId" = ${guestId}
-      AND status = 'CREATED'
+      AND status = 'ACTIVE'
     `
   }
 
@@ -1044,14 +1044,14 @@ export async function sendQRCode(guestId: string, eventId?: string) {
         FROM qr_codes
         WHERE "guestId" = ${guestId}
         AND "eventId" = ${eventId}
-        AND status = 'CREATED'
+        AND status = 'ACTIVE'
       `
     } else {
       qrCodes = await prisma.$queryRaw`
         SELECT code, status
         FROM qr_codes
         WHERE "guestId" = ${guestId}
-        AND status = 'CREATED'
+        AND status = 'ACTIVE'
       `
     }
     
@@ -1064,9 +1064,9 @@ export async function sendQRCode(guestId: string, eventId?: string) {
   console.log('QR code text type:', typeof qrCodeText)
   console.log('QR code text length:', qrCodeText.length)
   
-  // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
-  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
-  const qrCodeImageUrl = `${baseUrl}/api/qr/image/${encodeURIComponent(qrCodeText)}`
+  // Use external QR code service for better email compatibility
+  // For check-in QR codes, we use the actual QR code text, not a response URL
+  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeText)}`
 
   const html = `
     <!DOCTYPE html>
@@ -1101,11 +1101,22 @@ export async function sendQRCode(guestId: string, eventId?: string) {
           </div>
 
           <!-- QR Code Section -->
-          <div style="text-align: center; margin: 40px 0; padding: 30px; background-color: #f7fafc; border-radius: 12px; border: 2px dashed #cbd5e0;">
-            <img src="${qrCodeImageUrl}" alt="QR Code" style="max-width: 200px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" />
-            <p style="color: #718096; font-size: 14px; margin: 15px 0 0 0; font-style: italic;">
-              Scan this QR code at the entrance
+          <div style="background-color:#f9f9f9;border:1px solid #ddd;padding:15px;margin:20px 0;border-radius:4px">
+            <p style="margin:0;color:#666;font-size:14px">
+              <strong>Quick Response:</strong> Scan this QR code with your phone to quickly respond to this invitation.
             </p>
+            <div style="text-align:center;margin-top:15px">
+              <img src="${qrCodeImageUrl}" alt="Response QR Code" style="border:2px solid #ddd;border-radius:8px;padding:10px;background:white" />
+              <p style="margin-top:10px;font-family:monospace;font-size:12px;color:#666">Scan to respond to invitation</p>
+            </div>
+            <div style="margin-top:15px;padding-top:15px;border-top:1px solid #ddd;text-align:center">
+              <p style="margin:0;color:#666;font-size:12px">
+                <strong>Manual Entry:</strong> If scanning doesn't work, you can manually enter this code:
+              </p>
+              <p style="margin:5px 0 0 0;font-family:monospace;font-size:14px;color:#333;background:#fff;padding:8px;border:1px solid #ccc;border-radius:4px;display:inline-block">
+                ${qrCodeText}
+              </p>
+            </div>
           </div>
 
           <!-- Event Details -->
@@ -1403,9 +1414,9 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
   console.log('Plus-one QR code text type:', typeof qrCodeText)
   console.log('Plus-one QR code text length:', qrCodeText.length)
   
-  // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
-  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
-  const qrCodeImageUrl = `${baseUrl}/api/qr/image/${encodeURIComponent(qrCodeText)}`
+  // Use external QR code service for better email compatibility
+  // For check-in QR codes, we use the actual QR code text, not a response URL
+  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeText)}`
 
   const html = `
     <!DOCTYPE html>
@@ -1443,11 +1454,22 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
           </div>
 
           <!-- QR Code Section -->
-          <div style="text-align: center; margin: 40px 0; padding: 30px; background-color: #f7fafc; border-radius: 12px; border: 2px dashed #cbd5e0;">
-            <img src="${qrCodeImageUrl}" alt="QR Code" style="max-width: 200px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" />
-            <p style="color: #718096; font-size: 14px; margin: 15px 0 0 0; font-style: italic;">
-              Scan this QR code at the entrance
+          <div style="background-color:#f9f9f9;border:1px solid #ddd;padding:15px;margin:20px 0;border-radius:4px">
+            <p style="margin:0;color:#666;font-size:14px">
+              <strong>Entry Pass:</strong> Scan this QR code at the entrance to check in.
             </p>
+            <div style="text-align:center;margin-top:15px">
+              <img src="${qrCodeImageUrl}" alt="Entry QR Code" style="border:2px solid #ddd;border-radius:8px;padding:10px;background:white" />
+              <p style="margin-top:10px;font-family:monospace;font-size:12px;color:#666">Scan to check in at entrance</p>
+            </div>
+            <div style="margin-top:15px;padding-top:15px;border-top:1px solid #ddd;text-align:center">
+              <p style="margin:0;color:#666;font-size:12px">
+                <strong>Manual Entry:</strong> If scanning doesn't work, you can manually enter this code:
+              </p>
+              <p style="margin:5px 0 0 0;font-family:monospace;font-size:14px;color:#333;background:#fff;padding:8px;border:1px solid #ccc;border-radius:4px;display:inline-block">
+                ${qrCodeText}
+              </p>
+            </div>
           </div>
 
           <!-- Event Details -->

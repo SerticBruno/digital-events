@@ -16,7 +16,7 @@ export async function validateQRCode(code: string, eventId: string) {
       FROM qr_codes 
       WHERE code = ${code} 
       AND "eventId" = ${eventId}
-      AND status = 'CREATED'
+      AND status = 'ACTIVE'
     `
 
     if (qrCodeRecord.length === 0) {
@@ -81,17 +81,17 @@ export async function generateQRCode(guestId: string, eventId: string, type: 'RE
     // Generate unique QR code
     const code = `QR-${randomUUID().substring(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
 
-    // Insert QR code into database
+    // Insert QR code into database with ACTIVE status
     await prisma.$executeRaw`
       INSERT INTO qr_codes (id, code, type, "guestId", "eventId", status, "createdAt")
-      VALUES (${randomUUID()}, ${code}, ${type}, ${guestId}, ${eventId}, 'CREATED', datetime('now'))
+      VALUES (${randomUUID()}, ${code}, ${type}, ${guestId}, ${eventId}, 'ACTIVE', datetime('now'))
     `
 
     return {
       success: true,
       code,
       type,
-      status: 'CREATED'
+      status: 'ACTIVE'
     }
   } catch (error) {
     console.error('Error generating QR code:', error)
@@ -140,6 +140,32 @@ export async function getQRCodeForGuest(guestId: string, eventId: string) {
   }
 }
 
+export async function generatePlusOneQRCode(guestId: string, eventId: string, type: 'REGULAR' | 'VIP' = 'REGULAR', plusOneName: string) {
+  try {
+    // Generate unique QR code for plus-one
+    const code = `QR-PLUS-${randomUUID().substring(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+
+    // Insert QR code into database with plus-one identifier and ACTIVE status
+    await prisma.$executeRaw`
+      INSERT INTO qr_codes (id, code, type, "guestId", "eventId", status, "createdAt")
+      VALUES (${randomUUID()}, ${code}, ${type}, ${guestId}, ${eventId}, 'ACTIVE', datetime('now'))
+    `
+
+    return {
+      success: true,
+      code,
+      type,
+      status: 'ACTIVE'
+    }
+  } catch (error) {
+    console.error('Error generating plus-one QR code:', error)
+    return {
+      success: false,
+      error: 'Failed to generate plus-one QR code'
+    }
+  }
+}
+
 export async function regenerateQRCode(guestId: string, eventId: string, type: 'REGULAR' | 'VIP' = 'REGULAR') {
   try {
     // Invalidate existing QR codes for this guest and event
@@ -148,7 +174,7 @@ export async function regenerateQRCode(guestId: string, eventId: string, type: '
       SET status = 'EXPIRED'
       WHERE "guestId" = ${guestId} 
       AND "eventId" = ${eventId}
-      AND status = 'CREATED'
+      AND status = 'ACTIVE'
     `
 
     // Generate new QR code

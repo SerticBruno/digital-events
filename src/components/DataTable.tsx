@@ -346,7 +346,9 @@ export const columnRenderers = {
       'PENDING': { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Not Sent' },
       'GUEST': { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Guest' },
       'USED': { bg: 'bg-red-100', text: 'text-red-800', label: 'Used' },
-      'CREATED': { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' },
+      'ACTIVE': { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' },
+      'CREATED': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Created' },
+      'EXPIRED': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Expired' },
       'INACTIVE': { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Inactive' }
     }
 
@@ -396,8 +398,12 @@ export const columnRenderers = {
     if (qrCode) {
       if (qrCode.status === 'USED') {
         config = { bg: 'bg-red-100', text: 'text-red-800', label: 'Used' }
-      } else if (qrCode.status === 'CREATED') {
+      } else if (qrCode.status === 'ACTIVE') {
         config = { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' }
+      } else if (qrCode.status === 'CREATED') {
+        config = { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Created' }
+      } else if (qrCode.status === 'EXPIRED') {
+        config = { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Expired' }
       } else {
         config = { bg: 'bg-yellow-100', text: 'text-yellow-800', label: qrCode.status }
       }

@@ -146,7 +146,10 @@ export default function QRScanner() {
       const response = await fetch('/api/qr/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qrCode })
+        body: JSON.stringify({ 
+          code: qrCode,
+          eventId: selectedEvent 
+        })
       })
 
       const result = await response.json()
