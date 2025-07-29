@@ -430,6 +430,8 @@ export default function Dashboard() {
     }
   }
 
+
+
   const sendPlusOneInvitations = async (guestIds: string[]) => {
     if (!selectedEvent) {
       alert('Please select an event first')
@@ -852,6 +854,190 @@ export default function Dashboard() {
     }
   }
 
+  const sendRegularInvitations = async (guestIds: string[]) => {
+    if (!selectedEvent) {
+      alert('Please select an event first')
+      return
+    }
+
+    if (guestIds.length === 0) {
+      alert('Please select at least one guest')
+      return
+    }
+
+    setSendingEmails(true)
+    try {
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'regular_invitation', guestIds, eventId: selectedEvent.id })
+      })
+      const result = await response.json()
+      
+      if (response.ok) {
+        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        
+        let message = `Successfully sent ${successCount} regular invitations`
+        if (failureCount > 0) {
+          message += `, ${failureCount} failed`
+        }
+        
+
+        alert(message)
+        clearSelection()
+        if (selectedEvent) {
+          fetchGuests(selectedEvent.id)
+        }
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to send regular invitations:', error)
+      alert('Failed to send regular invitations')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
+  const sendRegularPlusOneInvitations = async (guestIds: string[]) => {
+    if (!selectedEvent) {
+      alert('Please select an event first')
+      return
+    }
+
+    if (guestIds.length === 0) {
+      alert('Please select at least one guest')
+      return
+    }
+
+    setSendingEmails(true)
+    try {
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'regular_plus_one_invitation', guestIds, eventId: selectedEvent.id })
+      })
+      const result = await response.json()
+      
+      if (response.ok) {
+        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        
+        let message = `Successfully sent ${successCount} regular +1 invitations`
+        if (failureCount > 0) {
+          message += `, ${failureCount} failed`
+        }
+        
+
+        alert(message)
+        clearSelection()
+        if (selectedEvent) {
+          fetchGuests(selectedEvent.id)
+        }
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to send regular +1 invitations:', error)
+      alert('Failed to send regular +1 invitations')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
+  const sendVIPInvitations = async (guestIds: string[]) => {
+    if (!selectedEvent) {
+      alert('Please select an event first')
+      return
+    }
+
+    if (guestIds.length === 0) {
+      alert('Please select at least one guest')
+      return
+    }
+
+    setSendingEmails(true)
+    try {
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'vip_invitation', guestIds, eventId: selectedEvent.id })
+      })
+      const result = await response.json()
+      
+      if (response.ok) {
+        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        
+        let message = `Successfully sent ${successCount} VIP invitations`
+        if (failureCount > 0) {
+          message += `, ${failureCount} failed`
+        }
+        
+
+        alert(message)
+        clearSelection()
+        if (selectedEvent) {
+          fetchGuests(selectedEvent.id)
+        }
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to send VIP invitations:', error)
+      alert('Failed to send VIP invitations')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
+  const sendVIPPlusOneInvitations = async (guestIds: string[]) => {
+    if (!selectedEvent) {
+      alert('Please select an event first')
+      return
+    }
+
+    if (guestIds.length === 0) {
+      alert('Please select at least one guest')
+      return
+    }
+
+    setSendingEmails(true)
+    try {
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'vip_plus_one_invitation', guestIds, eventId: selectedEvent.id })
+      })
+      const result = await response.json()
+      
+      if (response.ok) {
+        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
+        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
+        
+        let message = `Successfully sent ${successCount} VIP +1 invitations`
+        if (failureCount > 0) {
+          message += `, ${failureCount} failed`
+        }
+        
+
+        alert(message)
+        clearSelection()
+        if (selectedEvent) {
+          fetchGuests(selectedEvent.id)
+        }
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to send VIP +1 invitations:', error)
+      alert('Failed to send VIP +1 invitations')
+    } finally {
+      setSendingEmails(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1090,48 +1276,13 @@ export default function Dashboard() {
             </div>
 
             {/* Workflow-Based Action Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              {/* Guest Management Card */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+              {/* Column 1: Save the Date Communication */}
               <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
                 <div className={componentStyles.card.header}>
                   <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                    <Users className="w-5 h-5 mr-2" />
-                    Guest Management
-                  </h3>
-                </div>
-                <div className={componentStyles.card.content}>
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => setShowGuestModal(true)}
-                      className={`${getButtonClasses('success')} w-full`}
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Individual Guest
-                    </button>
-                    <button
-                      onClick={() => setShowCSVModal(true)}
-                      className={`${getButtonClasses('warning')} w-full`}
-                    >
-                      <Upload className="w-4 h-4" />
-                      Bulk Import (CSV)
-                    </button>
-                    <button
-                      onClick={() => setShowExistingGuestModal(true)}
-                      className={`${getButtonClasses('outline')} w-full`}
-                    >
-                      <User className="w-4 h-4" />
-                      Add Existing Guest
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Communication Card */}
-              <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
-                <div className={componentStyles.card.header}>
-                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                    <Send className="w-5 h-5 mr-2" />
-                    Communication
+                    <Calendar className="w-5 h-5 mr-2" />
+                    1. Save the Date
                   </h3>
                 </div>
                 <div className={componentStyles.card.content}>
@@ -1145,77 +1296,178 @@ export default function Dashboard() {
                       Send Save the Date
                     </button>
                     <button
-                      onClick={() => sendEmails('invitation', Array.from(selectedGuests))}
-                      disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('success')} w-full`}
-                    >
-                      <Send className="w-4 h-4" />
-                      Send Invitations
-                    </button>
-                    <button
-                      onClick={() => sendPlusOneInvitations(Array.from(selectedGuests))}
-                      disabled={selectedGuests.size === 0 || sendingEmails}
-                      className={`${getButtonClasses('indigo')} w-full`}
-                    >
-                      <Send className="w-4 h-4" />
-                      Plus-One Invitations
-                    </button>
-                    <button
                       onClick={testEmail}
-                      className={`${getButtonClasses('purple')} w-full`}
+                      className={`${getButtonClasses('outline')} w-full`}
                     >
-                      <Send className="w-4 h-4" />
+                      <Mail className="w-4 h-4" />
                       Test Email
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* QR & Check-in Card */}
+              {/* Column 2: Invitation Sending - Two Versions */}
+              <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+                <div className={componentStyles.card.header}>
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <Mail className="w-5 h-5 mr-2" />
+                    2. Slanje pozivnica
+                  </h3>
+                </div>
+                <div className={componentStyles.card.content}>
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => sendRegularInvitations(Array.from(selectedGuests))}
+                        disabled={selectedGuests.size === 0 || sendingEmails}
+                        className={`${getButtonClasses('success')} w-full`}
+                      >
+                        <Send className="w-4 h-4" />
+                        Regular Invitation
+                      </button>
+                      <button
+                        onClick={() => sendVIPInvitations(Array.from(selectedGuests))}
+                        disabled={selectedGuests.size === 0 || sendingEmails}
+                        className={`${getButtonClasses('warning')} w-full`}
+                      >
+                        <Send className="w-4 h-4" />
+                        VIP Invitation
+                      </button>
+                    </div>
+                    <div className="space-y-2 pt-3 border-t border-gray-200">
+                      <button
+                        onClick={() => sendRegularPlusOneInvitations(Array.from(selectedGuests))}
+                        disabled={selectedGuests.size === 0 || sendingEmails}
+                        className={`${getButtonClasses('indigo')} w-full`}
+                      >
+                        <Send className="w-4 h-4" />
+                        Regular +1 Invitation
+                      </button>
+                      <button
+                        onClick={() => sendVIPPlusOneInvitations(Array.from(selectedGuests))}
+                        disabled={selectedGuests.size === 0 || sendingEmails}
+                        className={`${getButtonClasses('purple')} w-full`}
+                      >
+                        <Send className="w-4 h-4" />
+                        VIP +1 Invitation
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 3: QR Code Sending - Four Versions */}
               <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
                 <div className={componentStyles.card.header}>
                   <h3 className="text-lg font-medium text-gray-900 flex items-center">
                     <QrCode className="w-5 h-5 mr-2" />
-                    QR & Check-in
+                    3. Slanje QR kodova
                   </h3>
                 </div>
                 <div className={componentStyles.card.content}>
                   <div className="space-y-3">
                     <button
-                      onClick={() => generateQRCodes(Array.from(selectedGuests))}
+                      onClick={() => sendEmails('qr_code', Array.from(selectedGuests))}
                       disabled={selectedGuests.size === 0 || sendingEmails}
                       className={`${getButtonClasses('teal')} w-full`}
                     >
                       <QrCode className="w-4 h-4" />
-                      Generate QR Codes
+                      Send Regular QR
                     </button>
                     <button
-                      onClick={() => sendEmails('qr_code', Array.from(selectedGuests))}
+                      onClick={() => sendEmails('plus_one_qr_code', Array.from(selectedGuests))}
+                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      className={`${getButtonClasses('indigo')} w-full`}
+                    >
+                      <QrCode className="w-4 h-4" />
+                      Send Regular +1 QR
+                    </button>
+                    <button
+                      onClick={() => sendEmails('vip_qr_code', Array.from(selectedGuests))}
                       disabled={selectedGuests.size === 0 || sendingEmails}
                       className={`${getButtonClasses('warning')} w-full`}
                     >
                       <QrCode className="w-4 h-4" />
-                      Send QR Codes
+                      Send VIP QR
                     </button>
                     <button
-                      onClick={sendQRCodesToConfirmedAttendees}
-                      disabled={sendingEmails}
-                      className={`${getButtonClasses('pink')} w-full`}
+                      onClick={() => sendEmails('vip_plus_one_qr_code', Array.from(selectedGuests))}
+                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      className={`${getButtonClasses('purple')} w-full`}
                     >
                       <QrCode className="w-4 h-4" />
-                      QR to Confirmed
+                      Send VIP +1 QR
                     </button>
-                    <a
-                      href="/scanner"
-                      className={`${getButtonClasses('orange')} w-full`}
+                    <div className="pt-3 border-t border-gray-200 space-y-3">
+                      <button
+                        onClick={() => generateQRCodes(Array.from(selectedGuests))}
+                        disabled={selectedGuests.size === 0 || sendingEmails}
+                        className={`${getButtonClasses('teal')} w-full`}
+                      >
+                        <QrCode className="w-4 h-4" />
+                        Generate QR Codes
+                      </button>
+                      <button
+                        onClick={regenerateMissingQRCodes}
+                        disabled={sendingEmails}
+                        className={`${getButtonClasses('orange')} w-full`}
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Regenerate Missing QR
+                      </button>
+                      <button
+                        onClick={sendQRCodesToConfirmedAttendees}
+                        disabled={sendingEmails}
+                        className={`${getButtonClasses('pink')} w-full`}
+                      >
+                        <QrCode className="w-4 h-4" />
+                        QR to Confirmed
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 4: Post-event Survey */}
+              <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+                <div className={componentStyles.card.header}>
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <BarChart3 className="w-5 h-5 mr-2" />
+                    4. Post-event anketa
+                  </h3>
+                </div>
+                <div className={componentStyles.card.content}>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => sendEmails('post_event_survey', Array.from(selectedGuests))}
+                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      className={`${getButtonClasses('success')} w-full`}
                     >
-                      <Scan className="w-4 h-4" />
-                      QR Scanner
-                    </a>
+                      <BarChart3 className="w-4 h-4" />
+                      Send Survey
+                    </button>
+                    <button
+                      onClick={() => sendEmails('feedback_request', Array.from(selectedGuests))}
+                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      className={`${getButtonClasses('outline')} w-full`}
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                      Request Feedback
+                    </button>
+                    <button
+                      onClick={() => sendEmails('thank_you', Array.from(selectedGuests))}
+                      disabled={selectedGuests.size === 0 || sendingEmails}
+                      className={`${getButtonClasses('primary')} w-full`}
+                    >
+                      <Mail className="w-4 h-4" />
+                      Thank You Email
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
+
+
 
 
 
@@ -1225,6 +1477,31 @@ export default function Dashboard() {
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">Guest List</h3>
                   <div className="flex items-center gap-4">
+                    {/* Guest Management Buttons */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowGuestModal(true)}
+                        className={`${getButtonClasses('success')} text-xs`}
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add Guest
+                      </button>
+                      <button
+                        onClick={() => setShowCSVModal(true)}
+                        className={`${getButtonClasses('warning')} text-xs`}
+                      >
+                        <Upload className="w-3 h-3" />
+                        Import CSV
+                      </button>
+                      <button
+                        onClick={() => setShowExistingGuestModal(true)}
+                        className={`${getButtonClasses('outline')} text-xs`}
+                      >
+                        <User className="w-3 h-3" />
+                        Add Existing
+                      </button>
+                    </div>
+                    
                     {/* Guest Selection Info */}
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-gray-600">Total: {guests.length}</span>
@@ -1252,14 +1529,6 @@ export default function Dashboard() {
                     
                     {/* Bulk Actions */}
                     <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
-                      <button
-                        onClick={regenerateMissingQRCodes}
-                        disabled={selectedGuests.size === 0 || sendingEmails}
-                        className={`${getButtonClasses('orange')} text-xs`}
-                      >
-                        <QrCode className="w-3 h-3" />
-                        Regenerate QR
-                      </button>
                       <button 
                         disabled={selectedGuests.size === 0}
                         className={`${getButtonClasses('secondary')} text-xs`}

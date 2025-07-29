@@ -162,7 +162,7 @@ export default function AddExistingGuest({ eventId, onGuestAdded, onClose }: Add
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={getInputClasses()}
-                placeholder="Search by name, email, or company... (leave empty to see all guests)"
+                placeholder="Search by name, email, or company"
               />
             </div>
 

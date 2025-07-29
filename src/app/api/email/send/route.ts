@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sendSaveTheDate, sendInvitation, sendQRCode, sendSurvey, sendPlusOneInvitation, sendPlusOneQRCode } from '@/lib/email'
+import { sendSaveTheDate, sendRegularInvitation, sendRegularPlusOneInvitation, sendVIPInvitation, sendVIPPlusOneInvitation, sendQRCode, sendSurvey, sendPlusOneInvitation, sendPlusOneQRCode } from '@/lib/email'
 import { prisma } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
@@ -82,9 +82,18 @@ export async function POST(request: NextRequest) {
           case 'save_the_date':
             result = await sendSaveTheDate(guestId, eventId)
             break
-                            case 'invitation':
-                    result = await sendInvitation(guestId, eventId)
-                    break
+          case 'regular_invitation':
+            result = await sendRegularInvitation(guestId, eventId)
+            break
+          case 'regular_plus_one_invitation':
+            result = await sendRegularPlusOneInvitation(guestId, eventId)
+            break
+          case 'vip_invitation':
+            result = await sendVIPInvitation(guestId, eventId)
+            break
+          case 'vip_plus_one_invitation':
+            result = await sendVIPPlusOneInvitation(guestId, eventId)
+            break
           case 'qr_code':
             result = await sendQRCode(guestId, eventId)
             break
@@ -101,75 +110,75 @@ export async function POST(request: NextRequest) {
             throw new Error(`Unknown email type: ${type}`)
         }
 
-                    if (result.success) {
-              // Handle invitation status updates based on email type
-              if (type === 'save_the_date') {
-                // For save-the-date emails, create or update a SAVE_THE_DATE invitation
-                const existingSaveTheDateInvitation = await prisma.invitation.findFirst({
-                  where: { 
-                    guestId, 
-                    eventId,
-                    type: 'SAVETHEDATE'
-                  }
-                })
-
-                if (existingSaveTheDateInvitation) {
-                  // Update existing save-the-date invitation
-                  await prisma.invitation.update({
-                    where: { id: existingSaveTheDateInvitation.id },
-                    data: {
-                      status: 'SENT',
-                      sentAt: new Date()
-                    }
-                  })
-                } else {
-                  // Create new save-the-date invitation
-                  await prisma.invitation.create({
-                    data: {
-                      type: 'SAVETHEDATE',
-                      status: 'SENT',
-                      sentAt: new Date(),
-                      guestId,
-                      eventId,
-                      hasPlusOne: false
-                    }
-                  })
-                }
-              } else if (type === 'invitation') {
-                // Only update invitation status for actual invitation emails
-                const existingInvitation = await prisma.invitation.findFirst({
-                  where: { 
-                    guestId, 
-                    eventId,
-                    type: 'INVITATION'
-                  }
-                })
-
-                if (existingInvitation) {
-                  // Update existing invitation - preserve hasPlusOne status
-                  await prisma.invitation.update({
-                    where: { id: existingInvitation.id },
-                    data: {
-                      status: 'SENT',
-                      sentAt: new Date()
-                      // Note: hasPlusOne is not updated here to preserve existing value
-                    }
-                  })
-                } else {
-                  // Create new invitation
-                  await prisma.invitation.create({
-                    data: {
-                      type: 'INVITATION',
-                      status: 'SENT',
-                      sentAt: new Date(),
-                      guestId,
-                      eventId,
-                      hasPlusOne: false
-                    }
-                  })
-                }
+        if (result.success) {
+          // Handle invitation status updates based on email type
+          if (type === 'save_the_date') {
+            // For save-the-date emails, create or update a SAVE_THE_DATE invitation
+            const existingSaveTheDateInvitation = await prisma.invitation.findFirst({
+              where: { 
+                guestId, 
+                eventId,
+                type: 'SAVETHEDATE'
               }
-              // For other email types (qr_code, survey, etc.), don't update invitation status
+            })
+
+            if (existingSaveTheDateInvitation) {
+              // Update existing save-the-date invitation
+              await prisma.invitation.update({
+                where: { id: existingSaveTheDateInvitation.id },
+                data: {
+                  status: 'SENT',
+                  sentAt: new Date()
+                }
+              })
+            } else {
+              // Create new save-the-date invitation
+              await prisma.invitation.create({
+                data: {
+                  type: 'SAVETHEDATE',
+                  status: 'SENT',
+                  sentAt: new Date(),
+                  guestId,
+                  eventId,
+                  hasPlusOne: false
+                }
+              })
+            }
+          } else if (type === 'regular_invitation' || type === 'regular_plus_one_invitation' || type === 'vip_invitation' || type === 'vip_plus_one_invitation') {
+            // Update invitation status for all types of invitation emails
+            const existingInvitation = await prisma.invitation.findFirst({
+              where: { 
+                guestId, 
+                eventId,
+                type: 'INVITATION'
+              }
+            })
+
+            if (existingInvitation) {
+              // Update existing invitation
+              await prisma.invitation.update({
+                where: { id: existingInvitation.id },
+                data: {
+                  status: 'SENT',
+                  sentAt: new Date(),
+                  hasPlusOne: type === 'regular_plus_one_invitation' || type === 'vip_plus_one_invitation' // Set hasPlusOne based on invitation type
+                }
+              })
+            } else {
+              // Create new invitation
+              await prisma.invitation.create({
+                data: {
+                  type: 'INVITATION',
+                  status: 'SENT',
+                  sentAt: new Date(),
+                  guestId,
+                  eventId,
+                  hasPlusOne: type === 'regular_plus_one_invitation' || type === 'vip_plus_one_invitation'
+                }
+              })
+            }
+          }
+          // For other email types (qr_code, survey, etc.), don't update invitation status
 
           results.push({ guestId, success: true, message: 'Email sent successfully' })
         } else {

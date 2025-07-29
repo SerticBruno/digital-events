@@ -39,6 +39,7 @@ model Guest {
   phone     String?
   isVip     Boolean  @default(false)
   isPlusOne Boolean  @default(false)
+  canHavePlusOne Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
