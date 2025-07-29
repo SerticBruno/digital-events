@@ -9,6 +9,61 @@ import AddExistingGuest from '@/components/AddExistingGuest'
 import DataTable, { columnRenderers } from '@/components/DataTable'
 import { getButtonClasses, componentStyles } from '@/lib/design-system'
 
+// Survey Stats Component
+function SurveyStats({ eventId }: { eventId: string }) {
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch(`/api/surveys/stats/${eventId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setStats(data.stats)
+        }
+      } catch (error) {
+        console.error('Failed to fetch survey stats:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [eventId])
+
+  if (loading) {
+    return <div className="text-center py-4">Loading survey statistics...</div>
+  }
+
+  if (!stats) {
+    return <div className="text-center py-4 text-gray-500">No survey data available</div>
+  }
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="text-center p-4 bg-blue-50 rounded-lg">
+        <div className="text-2xl font-bold text-blue-600">{stats.sentInvitations || 0}</div>
+        <div className="text-sm text-gray-600">Sent</div>
+      </div>
+      <div className="text-center p-4 bg-green-50 rounded-lg">
+        <div className="text-2xl font-bold text-green-600">{stats.openedInvitations || 0}</div>
+        <div className="text-sm text-gray-600">Opened</div>
+      </div>
+      <div className="text-center p-4 bg-purple-50 rounded-lg">
+        <div className="text-2xl font-bold text-purple-600">{stats.completedSurveys || 0}</div>
+        <div className="text-sm text-gray-600">Completed</div>
+      </div>
+      <div className="text-center p-4 bg-orange-50 rounded-lg">
+        <div className="text-2xl font-bold text-orange-600">
+          {stats.averageRating ? `${stats.averageRating}/5` : 'N/A'}
+        </div>
+        <div className="text-sm text-gray-600">Avg Rating</div>
+      </div>
+    </div>
+  )
+}
+
 interface Event {
   id: string
   name: string
@@ -1368,6 +1423,23 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Survey Statistics Section */}
+            {selectedEvent && (
+              <div className="mb-8">
+                <div className={`${componentStyles.card.base} hover:shadow-lg transition-shadow`}>
+                  <div className={componentStyles.card.header}>
+                    <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                      <BarChart3 className="w-5 h-5 mr-2" />
+                      Survey Statistics
+                    </h3>
+                  </div>
+                  <div className={componentStyles.card.content}>
+                    <SurveyStats eventId={selectedEvent.id} />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Workflow-Based Action Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">

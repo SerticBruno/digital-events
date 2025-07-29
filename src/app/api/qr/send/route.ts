@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { generateQRCode, generatePlusOneQRCode } from '@/lib/qr'
+import { generateQRCode } from '@/lib/qr'
 import { sendEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
@@ -109,15 +109,46 @@ export async function POST(request: NextRequest) {
           if (guest.plusOneEmail && guest.plusOneName) {
             console.log(`Generating plus-one QR code for ${guest.plusOneName} (${guest.plusOneEmail}) for guest ${guest.firstName} ${guest.lastName}`)
             
-            // Create a special QR code for plus-one
-            const plusOneQRResult = await generatePlusOneQRCode(guest.id, eventId, qrType, guest.plusOneName)
+            // Find the plus-one guest by email
+            const plusOneGuests = await prisma.$queryRaw<Array<{
+              id: string;
+            }>>`
+              SELECT id
+              FROM guests
+              WHERE email = ${guest.plusOneEmail}
+            `
             
-            if (plusOneQRResult.success) {
-              plusOneQRCode = plusOneQRResult.code
-              totalQRCodesGenerated++
+            if (plusOneGuests.length > 0) {
+              const plusOneGuestId = plusOneGuests[0].id
+              
+              // Generate QR code for the plus-one guest using their own ID
+              const plusOneQRResult = await generateQRCode(plusOneGuestId, eventId, qrType)
+              
+              if (plusOneQRResult.success) {
+                plusOneQRCode = plusOneQRResult.code
+                totalQRCodesGenerated++
+                
+                // Activate the plus-one's QR code
+                const { activateAllQRCodesForGuest } = await import('@/lib/qr')
+                const plusOneActivationResult = await activateAllQRCodesForGuest(plusOneGuestId, eventId)
+                
+                if (!plusOneActivationResult.success) {
+                  console.warn(`Failed to activate QR codes for plus-one guest ${plusOneGuestId}:`, plusOneActivationResult.error)
+                }
+              } else {
+                console.error(`Failed to generate plus-one QR code for ${guest.plusOneName}:`, plusOneQRResult.error)
+              }
             } else {
-              console.error(`Failed to generate plus-one QR code for ${guest.plusOneName}:`, plusOneQRResult.error)
+              console.error(`Plus-one guest not found for email: ${guest.plusOneEmail}`)
             }
+          }
+
+          // Ensure both QR codes are activated for this guest
+          const { activateAllQRCodesForGuest } = await import('@/lib/qr')
+          const activationResult = await activateAllQRCodesForGuest(guest.id, eventId)
+          
+          if (!activationResult.success) {
+            console.warn(`Failed to activate QR codes for guest ${guest.id}:`, activationResult.error)
           }
 
           // Send single email with both QR codes to main guest
@@ -125,11 +156,11 @@ export async function POST(request: NextRequest) {
             guest.email,
             `${guest.firstName} ${guest.lastName}`,
             mainGuestQRResult.code!,
-            plusOneQRCode,
+            plusOneQRCode || null,
             qrType,
             eventId,
-            (guest.plusOneName as string | null),
-            (guest.plusOneEmail as string | null)
+            guest.plusOneName || null,
+            guest.plusOneEmail || null
           )
 
           if (emailResult.success) {
@@ -173,6 +204,14 @@ export async function POST(request: NextRequest) {
             }
 
             totalQRCodesGenerated++
+
+            // Ensure QR code is activated for this guest
+            const { activateAllQRCodesForGuest } = await import('@/lib/qr')
+            const activationResult = await activateAllQRCodesForGuest(qrInfo.guestId, eventId)
+            
+            if (!activationResult.success) {
+              console.warn(`Failed to activate QR codes for guest ${qrInfo.guestId}:`, activationResult.error)
+            }
 
             // Send email with QR code
             const emailResult = await sendQRCodeEmail(

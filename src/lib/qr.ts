@@ -142,6 +142,10 @@ export async function getQRCodeForGuest(guestId: string, eventId: string) {
 
 export async function generatePlusOneQRCode(guestId: string, eventId: string, type: 'REGULAR' | 'VIP' = 'REGULAR', plusOneName: string) {
   try {
+    // This function is deprecated - use generateQRCode with the plus-one's guest ID instead
+    // For backward compatibility, we'll still create a QR code but log a warning
+    console.warn('generatePlusOneQRCode is deprecated. Use generateQRCode with the plus-one guest ID instead.')
+    
     // Generate unique QR code for plus-one
     const code = `QR-PLUS-${randomUUID().substring(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
 
@@ -184,6 +188,51 @@ export async function regenerateQRCode(guestId: string, eventId: string, type: '
     return {
       success: false,
       error: 'Failed to regenerate QR code'
+    }
+  }
+}
+
+export async function updateQRCodeStatus(guestId: string, eventId: string, status: 'CREATED' | 'ACTIVE' | 'USED' | 'EXPIRED') {
+  try {
+    await prisma.$executeRaw`
+      UPDATE qr_codes 
+      SET status = ${status}
+      WHERE "guestId" = ${guestId} 
+      AND "eventId" = ${eventId}
+    `
+
+    return {
+      success: true,
+      message: `QR code status updated to ${status}`
+    }
+  } catch (error) {
+    console.error('Error updating QR code status:', error)
+    return {
+      success: false,
+      error: 'Failed to update QR code status'
+    }
+  }
+}
+
+export async function activateAllQRCodesForGuest(guestId: string, eventId: string) {
+  try {
+    await prisma.$executeRaw`
+      UPDATE qr_codes 
+      SET status = 'ACTIVE'
+      WHERE "guestId" = ${guestId} 
+      AND "eventId" = ${eventId}
+      AND status = 'CREATED'
+    `
+
+    return {
+      success: true,
+      message: 'All QR codes activated for guest'
+    }
+  } catch (error) {
+    console.error('Error activating QR codes for guest:', error)
+    return {
+      success: false,
+      error: 'Failed to activate QR codes for guest'
     }
   }
 } 

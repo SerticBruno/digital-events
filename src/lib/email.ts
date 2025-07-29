@@ -519,7 +519,7 @@ export async function sendRegularPlusOneInvitation(guestId: string, eventId?: st
           <div style="background-color: #f0f8ff; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; border-radius: 4px;">
             <p style="margin: 0; color: #1976d2; font-size: 14px;">
               <strong>Plus-One Option:</strong> You can bring a guest with you to this event. 
-              Click "I'm Coming with Guest" below and we'll ask for your guest's information.
+              Click "I'm Coming with Guest" below and we'll ask for your guest's email.
             </p>
           </div>
 
@@ -886,7 +886,7 @@ export async function sendVIPPlusOneInvitation(guestId: string, eventId?: string
           <div style="background-color: #fff8e1; border-left: 4px solid #ffd700; padding: 15px; margin: 20px 0; border-radius: 4px;">
             <p style="margin: 0; color: #f57c00; font-size: 14px;">
               <strong>VIP Plus-One Option:</strong> As a VIP guest, you can bring a guest with you to this exclusive event. 
-              Click "I'm Coming with Guest" below and we'll ask for your guest's information.
+              Click "I'm Coming with Guest" below and we'll ask for your guest's email.
             </p>
           </div>
 
@@ -1371,14 +1371,14 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
       FROM qr_codes
       WHERE "guestId" = ${plusOneGuestId}
       AND "eventId" = ${eventId}
-      AND status = 'CREATED'
+      AND status = 'ACTIVE'
     `
   } else {
     qrCodes = await prisma.$queryRaw`
       SELECT code, status
       FROM qr_codes
       WHERE "guestId" = ${plusOneGuestId}
-      AND status = 'CREATED'
+      AND status = 'ACTIVE'
     `
   }
 
@@ -1394,14 +1394,14 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
         FROM qr_codes
         WHERE "guestId" = ${plusOneGuestId}
         AND "eventId" = ${eventId}
-        AND status = 'CREATED'
+        AND status = 'ACTIVE'
       `
     } else {
       qrCodes = await prisma.$queryRaw`
         SELECT code, status
         FROM qr_codes
         WHERE "guestId" = ${plusOneGuestId}
-        AND status = 'CREATED'
+        AND status = 'ACTIVE'
       `
     }
     
@@ -1595,8 +1595,9 @@ export async function sendSurvey(guestId: string, eventId?: string) {
     location: eventData.eventLocation,
     maxGuests: eventData.eventMaxGuests
   }
-  // Use Google Form URL for survey (you can replace this with your actual Google Form URL)
-  const surveyUrl = process.env.GOOGLE_FORM_URL || 'https://forms.google.com/your-form-id'
+  // Create tracking URL for survey completion
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const trackingUrl = `${baseUrl}/api/surveys/complete/${guest.id}?eventId=${event.id}`
   
   const html = `
     <!DOCTYPE html>
@@ -1656,7 +1657,7 @@ export async function sendSurvey(guestId: string, eventId?: string) {
 
           <!-- Survey Button -->
           <div style="text-align: center; margin: 40px 0;">
-            <a href="${surveyUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 18px 36px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 18px; display: inline-block; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <a href="${trackingUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 18px 36px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 18px; display: inline-block; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
               📊 Take Our Survey
             </a>
           </div>
