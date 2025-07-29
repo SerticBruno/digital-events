@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       FROM qr_codes 
       WHERE code = ${code} 
       AND "eventId" = ${eventId}
-      AND status = 'ACTIVE'
+      AND status IN ('SENT', 'GENERATED')
     `
 
     if (qrCodeRecord.length === 0) {

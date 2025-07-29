@@ -51,7 +51,7 @@ export interface QRCode {
   id: string
   code: string
   type: string
-  status: string // CREATED, ACTIVE, USED, EXPIRED
+  status: string // CREATED, GENERATED, SENT, USED, EXPIRED
   usedAt?: string
   createdAt: string
 } 

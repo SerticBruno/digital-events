@@ -154,18 +154,17 @@ export default function QRScanner() {
 
       const result = await response.json()
       
-      // Convert the new API response format to match the expected interface
-      if (response.ok) {
+      if (response.ok && result.success) {
         setScanResult({
           success: true,
-          message: result.message,
+          message: `Welcome! ${result.guest.firstName} ${result.guest.lastName} has been checked in successfully.`,
           guest: result.guest
         })
       } else {
         setScanResult({
           success: false,
-          message: result.error,
-          guest: result.guest
+          message: result.error || 'Failed to validate QR code',
+          guest: undefined
         })
       }
       

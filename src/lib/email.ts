@@ -1021,14 +1021,14 @@ export async function sendQRCode(guestId: string, eventId?: string) {
       FROM qr_codes
       WHERE "guestId" = ${guestId}
       AND "eventId" = ${eventId}
-      AND status = 'ACTIVE'
+      AND status IN ('SENT', 'GENERATED')
     `
   } else {
     qrCodes = await prisma.$queryRaw`
       SELECT code, status
       FROM qr_codes
       WHERE "guestId" = ${guestId}
-      AND status = 'ACTIVE'
+      AND status IN ('SENT', 'GENERATED')
     `
   }
 
@@ -1044,14 +1044,14 @@ export async function sendQRCode(guestId: string, eventId?: string) {
         FROM qr_codes
         WHERE "guestId" = ${guestId}
         AND "eventId" = ${eventId}
-        AND status = 'ACTIVE'
+        AND status = 'GENERATED'
       `
     } else {
       qrCodes = await prisma.$queryRaw`
         SELECT code, status
         FROM qr_codes
         WHERE "guestId" = ${guestId}
-        AND status = 'ACTIVE'
+        AND status = 'GENERATED'
       `
     }
     
@@ -1063,6 +1063,12 @@ export async function sendQRCode(guestId: string, eventId?: string) {
   console.log('Generating QR code for text:', qrCodeText)
   console.log('QR code text type:', typeof qrCodeText)
   console.log('QR code text length:', qrCodeText.length)
+  
+  // Update QR code status to SENT since we're sending it via email
+  if (qrCodes[0].status === 'GENERATED') {
+    const { updateQRCodeStatus } = await import('@/lib/qr')
+    await updateQRCodeStatus(guestId, eventId || event.id, 'SENT')
+  }
   
   // Use external QR code service for better email compatibility
   // For check-in QR codes, we use the actual QR code text, not a response URL
@@ -1371,14 +1377,14 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
       FROM qr_codes
       WHERE "guestId" = ${plusOneGuestId}
       AND "eventId" = ${eventId}
-      AND status = 'ACTIVE'
+      AND status IN ('SENT', 'GENERATED')
     `
   } else {
     qrCodes = await prisma.$queryRaw`
       SELECT code, status
       FROM qr_codes
       WHERE "guestId" = ${plusOneGuestId}
-      AND status = 'ACTIVE'
+      AND status IN ('SENT', 'GENERATED')
     `
   }
 
@@ -1394,14 +1400,14 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
         FROM qr_codes
         WHERE "guestId" = ${plusOneGuestId}
         AND "eventId" = ${eventId}
-        AND status = 'ACTIVE'
+        AND status = 'GENERATED'
       `
     } else {
       qrCodes = await prisma.$queryRaw`
         SELECT code, status
         FROM qr_codes
         WHERE "guestId" = ${plusOneGuestId}
-        AND status = 'ACTIVE'
+        AND status = 'GENERATED'
       `
     }
     

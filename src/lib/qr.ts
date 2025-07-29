@@ -16,7 +16,7 @@ export async function validateQRCode(code: string, eventId: string) {
       FROM qr_codes 
       WHERE code = ${code} 
       AND "eventId" = ${eventId}
-      AND status = 'ACTIVE'
+      AND status IN ('SENT', 'GENERATED')
     `
 
     if (qrCodeRecord.length === 0) {
@@ -81,17 +81,17 @@ export async function generateQRCode(guestId: string, eventId: string, type: 'RE
     // Generate unique QR code
     const code = `QR-${randomUUID().substring(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
 
-    // Insert QR code into database with ACTIVE status
+    // Insert QR code into database with GENERATED status
     await prisma.$executeRaw`
       INSERT INTO qr_codes (id, code, type, "guestId", "eventId", status, "createdAt")
-      VALUES (${randomUUID()}, ${code}, ${type}, ${guestId}, ${eventId}, 'ACTIVE', datetime('now'))
+      VALUES (${randomUUID()}, ${code}, ${type}, ${guestId}, ${eventId}, 'GENERATED', datetime('now'))
     `
 
     return {
       success: true,
       code,
       type,
-      status: 'ACTIVE'
+      status: 'GENERATED'
     }
   } catch (error) {
     console.error('Error generating QR code:', error)
@@ -149,17 +149,17 @@ export async function generatePlusOneQRCode(guestId: string, eventId: string, ty
     // Generate unique QR code for plus-one
     const code = `QR-PLUS-${randomUUID().substring(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
 
-    // Insert QR code into database with plus-one identifier and ACTIVE status
+    // Insert QR code into database with plus-one identifier and GENERATED status
     await prisma.$executeRaw`
       INSERT INTO qr_codes (id, code, type, "guestId", "eventId", status, "createdAt")
-      VALUES (${randomUUID()}, ${code}, ${type}, ${guestId}, ${eventId}, 'ACTIVE', datetime('now'))
+      VALUES (${randomUUID()}, ${code}, ${type}, ${guestId}, ${eventId}, 'GENERATED', datetime('now'))
     `
 
     return {
       success: true,
       code,
       type,
-      status: 'ACTIVE'
+      status: 'GENERATED'
     }
   } catch (error) {
     console.error('Error generating plus-one QR code:', error)
@@ -178,7 +178,7 @@ export async function regenerateQRCode(guestId: string, eventId: string, type: '
       SET status = 'EXPIRED'
       WHERE "guestId" = ${guestId} 
       AND "eventId" = ${eventId}
-      AND status = 'ACTIVE'
+      AND status IN ('GENERATED', 'SENT')
     `
 
     // Generate new QR code
@@ -192,14 +192,18 @@ export async function regenerateQRCode(guestId: string, eventId: string, type: '
   }
 }
 
-export async function updateQRCodeStatus(guestId: string, eventId: string, status: 'CREATED' | 'ACTIVE' | 'USED' | 'EXPIRED') {
+export async function updateQRCodeStatus(guestId: string, eventId: string, status: 'CREATED' | 'GENERATED' | 'SENT' | 'USED' | 'EXPIRED') {
   try {
-    await prisma.$executeRaw`
+    console.log(`updateQRCodeStatus called: guestId=${guestId}, eventId=${eventId}, status=${status}`)
+    
+    const result = await prisma.$executeRaw`
       UPDATE qr_codes 
       SET status = ${status}
       WHERE "guestId" = ${guestId} 
       AND "eventId" = ${eventId}
     `
+    
+    console.log(`updateQRCodeStatus result:`, result)
 
     return {
       success: true,
@@ -218,15 +222,15 @@ export async function activateAllQRCodesForGuest(guestId: string, eventId: strin
   try {
     await prisma.$executeRaw`
       UPDATE qr_codes 
-      SET status = 'ACTIVE'
+      SET status = 'SENT'
       WHERE "guestId" = ${guestId} 
       AND "eventId" = ${eventId}
-      AND status = 'CREATED'
+      AND status IN ('CREATED', 'GENERATED')
     `
 
     return {
       success: true,
-      message: 'All QR codes activated for guest'
+      message: 'All QR codes marked as sent for guest'
     }
   } catch (error) {
     console.error('Error activating QR codes for guest:', error)

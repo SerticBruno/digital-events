@@ -93,7 +93,7 @@ model QRCode {
   id        String   @id @default(cuid())
   code      String   @unique
   type      String   // REGULAR, VIP
-  status    String   @default("CREATED") // CREATED, ACTIVE, USED, EXPIRED
+  status    String   @default("CREATED") // CREATED, GENERATED, SENT, USED, EXPIRED
   usedAt    DateTime?
   createdAt DateTime @default(now())
 

@@ -476,7 +476,7 @@ export default function Dashboard() {
         
 
         alert(message)
-        clearSelection()
+        // Keep selected guests visible for further actions
         if (selectedEvent) {
           fetchGuests(selectedEvent.id)
         }
@@ -550,7 +550,7 @@ export default function Dashboard() {
         
 
         alert(message)
-        clearSelection()
+        // Keep selected guests visible for further actions
         if (selectedEvent) {
           fetchGuests(selectedEvent.id)
         }
@@ -654,7 +654,7 @@ export default function Dashboard() {
       }
       
       alert(message)
-      clearSelection()
+      // Keep selected guests visible for further actions
       if (selectedEvent) {
         fetchGuests(selectedEvent.id)
       }
@@ -836,7 +836,7 @@ export default function Dashboard() {
         
         alert(message)
         await fetchGuests(selectedEvent.id)
-        clearSelection()
+        // Keep selected guests visible for further actions
       } else {
         alert(`Error: ${result.error}`)
       }
@@ -1034,7 +1034,7 @@ export default function Dashboard() {
         
 
         alert(message)
-        clearSelection()
+        // Keep selected guests visible for further actions
         if (selectedEvent) {
           fetchGuests(selectedEvent.id)
         }
@@ -1080,7 +1080,7 @@ export default function Dashboard() {
         
 
         alert(message)
-        clearSelection()
+        // Keep selected guests visible for further actions
         if (selectedEvent) {
           fetchGuests(selectedEvent.id)
         }
@@ -1126,7 +1126,7 @@ export default function Dashboard() {
         
 
         alert(message)
-        clearSelection()
+        // Keep selected guests visible for further actions
         if (selectedEvent) {
           fetchGuests(selectedEvent.id)
         }
@@ -1172,7 +1172,7 @@ export default function Dashboard() {
         
 
         alert(message)
-        clearSelection()
+        // Keep selected guests visible for further actions
         if (selectedEvent) {
           fetchGuests(selectedEvent.id)
         }

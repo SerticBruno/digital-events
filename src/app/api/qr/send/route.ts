@@ -78,32 +78,158 @@ export async function POST(request: NextRequest) {
         }
 
         // Handle different response scenarios
-        let qrCodesToGenerate = []
-
         if (guest.response === 'COMING') {
-          // Guest is coming alone - generate 1 QR code
-          const qrType: 'REGULAR' | 'VIP' = guest.isVip ? 'VIP' : 'REGULAR'
-          qrCodesToGenerate.push({
-            guestId: guest.id,
-            guestName: `${guest.firstName} ${guest.lastName}`,
-            email: guest.email,
-            type: qrType,
-            isMainGuest: true
-          })
-        } else if (guest.response === 'COMING_WITH_PLUS_ONE') {
-          // Guest is coming with plus-one - generate 2 QR codes and send 1 email
+          // Guest is coming alone - check if QR code already exists
           const qrType: 'REGULAR' | 'VIP' = guest.isVip ? 'VIP' : 'REGULAR'
           
-          // Generate QR code for main guest
-          const mainGuestQRResult = await generateQRCode(guest.id, eventId, qrType)
+          // Check if guest already has a QR code for this event
+          const existingQRCodes = await prisma.$queryRaw<Array<{
+            code: string;
+            status: string;
+          }>>`
+            SELECT code, status
+            FROM qr_codes
+            WHERE "guestId" = ${guest.id}
+            AND "eventId" = ${eventId}
+            AND type = ${qrType}
+          `
           
-          if (!mainGuestQRResult.success) {
-            throw new Error(mainGuestQRResult.error || 'Failed to generate main guest QR code')
+          if (existingQRCodes.length > 0) {
+            // QR code already exists, just update it to SENT if it's not already sent
+            const existingQR = existingQRCodes[0]
+            console.log(`Found existing QR code for guest ${guest.id} with status: ${existingQR.status}`)
+            if (existingQR.status === 'GENERATED') {
+              const { updateQRCodeStatus } = await import('@/lib/qr')
+              console.log(`Updating existing QR code status from GENERATED to SENT for guest ${guest.id}`)
+              const updateResult = await updateQRCodeStatus(guest.id, eventId, 'SENT')
+              if (updateResult.success) {
+                console.log(`Successfully updated existing QR code status to SENT for guest ${guest.id}`)
+              } else {
+                console.warn(`Failed to update existing QR code status for guest ${guest.id}:`, updateResult.error)
+              }
+            }
+            
+            // Send email with existing QR code
+            const emailResult = await sendQRCodeEmail(
+              guest.email,
+              `${guest.firstName} ${guest.lastName}`,
+              existingQR.code,
+              qrType,
+              eventId,
+              true,
+              undefined
+            )
+            
+            if (emailResult.success) {
+              totalEmailsSent++
+              results.push({
+                guestId: guest.id,
+                guestName: `${guest.firstName} ${guest.lastName}`,
+                status: 'success',
+                qrCodesGenerated: 0,
+                emailsSent: 1,
+                reason: 'Used existing QR code'
+              })
+            } else {
+              results.push({
+                guestId: guest.id,
+                guestName: `${guest.firstName} ${guest.lastName}`,
+                status: 'failed',
+                reason: 'Failed to send email with existing QR code'
+              })
+            }
+            continue
+          }
+          
+          // Generate new QR code if none exists
+          const qrResult = await generateQRCode(guest.id, eventId, qrType)
+          
+          if (!qrResult.success) {
+            throw new Error(qrResult.error || 'Failed to generate QR code')
           }
 
           totalQRCodesGenerated++
 
+          // Directly update the QR code status to SENT since we're sending it via email
+          const { updateQRCodeStatus } = await import('@/lib/qr')
+          console.log(`Updating QR code status to SENT for guest ${guest.id} in event ${eventId}`)
+          const statusUpdateResult = await updateQRCodeStatus(guest.id, eventId, 'SENT')
+          
+          if (statusUpdateResult.success) {
+            console.log(`Successfully updated QR code status to SENT for guest ${guest.id}`)
+          } else {
+            console.warn(`Failed to update QR code status for guest ${guest.id}:`, statusUpdateResult.error)
+          }
+
+          // Send email with QR code
+          const emailResult = await sendQRCodeEmail(
+            guest.email,
+            `${guest.firstName} ${guest.lastName}`,
+            qrResult.code!,
+            qrType,
+            eventId,
+            true,
+            undefined
+          )
+
+          if (emailResult.success) {
+            totalEmailsSent++
+            results.push({
+              guestId: guest.id,
+              guestName: `${guest.firstName} ${guest.lastName}`,
+              status: 'success',
+              qrCodesGenerated: 1,
+              emailsSent: 1
+            })
+          } else {
+            results.push({
+              guestId: guest.id,
+              guestName: `${guest.firstName} ${guest.lastName}`,
+              status: 'failed',
+              reason: 'Failed to send email'
+            })
+          }
+        } else if (guest.response === 'COMING_WITH_PLUS_ONE') {
+          // Guest is coming with plus-one - check for existing QR codes first
+          const qrType: 'REGULAR' | 'VIP' = guest.isVip ? 'VIP' : 'REGULAR'
+          
+          // Check if main guest already has a QR code for this event
+          const existingMainGuestQRCodes = await prisma.$queryRaw<Array<{
+            code: string;
+            status: string;
+          }>>`
+            SELECT code, status
+            FROM qr_codes
+            WHERE "guestId" = ${guest.id}
+            AND "eventId" = ${eventId}
+            AND type = ${qrType}
+          `
+          
+          let mainGuestQRCode = null
+          let mainGuestQRGenerated = false
+          
+                      if (existingMainGuestQRCodes.length > 0) {
+              // Use existing QR code
+              mainGuestQRCode = existingMainGuestQRCodes[0].code
+              if (existingMainGuestQRCodes[0].status === 'GENERATED') {
+                const { updateQRCodeStatus } = await import('@/lib/qr')
+                await updateQRCodeStatus(guest.id, eventId, 'SENT')
+              }
+          } else {
+            // Generate new QR code for main guest
+            const mainGuestQRResult = await generateQRCode(guest.id, eventId, qrType)
+            
+            if (!mainGuestQRResult.success) {
+              throw new Error(mainGuestQRResult.error || 'Failed to generate main guest QR code')
+            }
+
+            mainGuestQRCode = mainGuestQRResult.code
+            mainGuestQRGenerated = true
+            totalQRCodesGenerated++
+          }
+
           let plusOneQRCode = null
+          let plusOneQRGenerated = false
           
           // Generate QR code for plus-one (if plus-one email exists)
           if (guest.plusOneEmail && guest.plusOneName) {
@@ -121,41 +247,65 @@ export async function POST(request: NextRequest) {
             if (plusOneGuests.length > 0) {
               const plusOneGuestId = plusOneGuests[0].id
               
-              // Generate QR code for the plus-one guest using their own ID
-              const plusOneQRResult = await generateQRCode(plusOneGuestId, eventId, qrType)
+              // Check if plus-one guest already has a QR code for this event
+              const existingPlusOneQRCodes = await prisma.$queryRaw<Array<{
+                code: string;
+                status: string;
+              }>>`
+                SELECT code, status
+                FROM qr_codes
+                WHERE "guestId" = ${plusOneGuestId}
+                AND "eventId" = ${eventId}
+                AND type = ${qrType}
+              `
               
-              if (plusOneQRResult.success) {
-                plusOneQRCode = plusOneQRResult.code
-                totalQRCodesGenerated++
-                
-                // Activate the plus-one's QR code
-                const { activateAllQRCodesForGuest } = await import('@/lib/qr')
-                const plusOneActivationResult = await activateAllQRCodesForGuest(plusOneGuestId, eventId)
-                
-                if (!plusOneActivationResult.success) {
-                  console.warn(`Failed to activate QR codes for plus-one guest ${plusOneGuestId}:`, plusOneActivationResult.error)
+              if (existingPlusOneQRCodes.length > 0) {
+                // Use existing QR code
+                plusOneQRCode = existingPlusOneQRCodes[0].code
+                if (existingPlusOneQRCodes[0].status === 'GENERATED') {
+                  const { updateQRCodeStatus } = await import('@/lib/qr')
+                  await updateQRCodeStatus(plusOneGuestId, eventId, 'SENT')
                 }
               } else {
-                console.error(`Failed to generate plus-one QR code for ${guest.plusOneName}:`, plusOneQRResult.error)
+                // Generate new QR code for the plus-one guest using their own ID
+                const plusOneQRResult = await generateQRCode(plusOneGuestId, eventId, qrType)
+                
+                if (plusOneQRResult.success) {
+                  plusOneQRCode = plusOneQRResult.code
+                  plusOneQRGenerated = true
+                  totalQRCodesGenerated++
+                  
+                  // Directly update the plus-one's QR code status to SENT since we're sending it via email
+                  const { updateQRCodeStatus } = await import('@/lib/qr')
+                  const plusOneStatusUpdateResult = await updateQRCodeStatus(plusOneGuestId, eventId, 'SENT')
+                  
+                  if (!plusOneStatusUpdateResult.success) {
+                    console.warn(`Failed to update QR code status for plus-one guest ${plusOneGuestId}:`, plusOneStatusUpdateResult.error)
+                  }
+                } else {
+                  console.error(`Failed to generate plus-one QR code for ${guest.plusOneName}:`, plusOneQRResult.error)
+                }
               }
             } else {
               console.error(`Plus-one guest not found for email: ${guest.plusOneEmail}`)
             }
           }
 
-          // Ensure both QR codes are activated for this guest
-          const { activateAllQRCodesForGuest } = await import('@/lib/qr')
-          const activationResult = await activateAllQRCodesForGuest(guest.id, eventId)
-          
-          if (!activationResult.success) {
-            console.warn(`Failed to activate QR codes for guest ${guest.id}:`, activationResult.error)
+          // Ensure QR codes are activated if we generated new ones
+          if (mainGuestQRGenerated) {
+            const { updateQRCodeStatus } = await import('@/lib/qr')
+            const statusUpdateResult = await updateQRCodeStatus(guest.id, eventId, 'SENT')
+            
+            if (!statusUpdateResult.success) {
+              console.warn(`Failed to update QR code status for guest ${guest.id}:`, statusUpdateResult.error)
+            }
           }
 
           // Send single email with both QR codes to main guest
           const emailResult = await sendQRCodeEmailWithPlusOne(
             guest.email,
             `${guest.firstName} ${guest.lastName}`,
-            mainGuestQRResult.code!,
+            mainGuestQRCode!,
             plusOneQRCode || null,
             qrType,
             eventId,
@@ -170,7 +320,7 @@ export async function POST(request: NextRequest) {
               guestName: `${guest.firstName} ${guest.lastName}`,
               email: guest.email,
               status: 'success',
-              qrCode: mainGuestQRResult.code,
+              qrCode: mainGuestQRCode,
               qrType: qrType,
               isMainGuest: true,
               plusOneQRCode: plusOneQRCode
@@ -181,7 +331,7 @@ export async function POST(request: NextRequest) {
               guestName: `${guest.firstName} ${guest.lastName}`,
               email: guest.email,
               status: 'qr_generated_email_failed',
-              qrCode: mainGuestQRResult.code,
+              qrCode: mainGuestQRCode,
               qrType: qrType,
               error: emailResult.error,
               plusOneQRCode: plusOneQRCode
@@ -191,72 +341,7 @@ export async function POST(request: NextRequest) {
           continue // Skip the regular QR generation loop for this guest
         }
 
-        // Generate QR codes and send emails
-        for (const qrInfo of qrCodesToGenerate) {
-          try {
-            let qrResult
-            
-            // Generate QR code for main guest
-            qrResult = await generateQRCode(qrInfo.guestId, eventId, qrInfo.type)
-            
-            if (!qrResult.success) {
-              throw new Error(qrResult.error || 'Failed to generate QR code')
-            }
 
-            totalQRCodesGenerated++
-
-            // Ensure QR code is activated for this guest
-            const { activateAllQRCodesForGuest } = await import('@/lib/qr')
-            const activationResult = await activateAllQRCodesForGuest(qrInfo.guestId, eventId)
-            
-            if (!activationResult.success) {
-              console.warn(`Failed to activate QR codes for guest ${qrInfo.guestId}:`, activationResult.error)
-            }
-
-            // Send email with QR code
-            const emailResult = await sendQRCodeEmail(
-              qrInfo.email,
-              qrInfo.guestName,
-              qrResult.code!,
-              qrInfo.type,
-              eventId,
-              qrInfo.isMainGuest,
-              undefined
-            )
-
-            if (emailResult.success) {
-              totalEmailsSent++
-              results.push({
-                guestId: qrInfo.guestId,
-                guestName: qrInfo.guestName,
-                email: qrInfo.email,
-                status: 'success',
-                qrCode: qrResult.code,
-                qrType: qrInfo.type,
-                isMainGuest: qrInfo.isMainGuest
-              })
-            } else {
-              results.push({
-                guestId: qrInfo.guestId,
-                guestName: qrInfo.guestName,
-                email: qrInfo.email,
-                status: 'qr_generated_email_failed',
-                qrCode: qrResult.code,
-                qrType: qrInfo.type,
-                error: emailResult.error
-              })
-            }
-          } catch (error) {
-            console.error(`Failed to process QR code for ${qrInfo.guestName}:`, error)
-            results.push({
-              guestId: qrInfo.guestId,
-              guestName: qrInfo.guestName,
-              email: qrInfo.email,
-              status: 'failed',
-              error: error instanceof Error ? error.message : 'Unknown error'
-            })
-          }
-        }
       } catch (error) {
         console.error(`Failed to process guest ${guest.firstName} ${guest.lastName}:`, error)
         results.push({

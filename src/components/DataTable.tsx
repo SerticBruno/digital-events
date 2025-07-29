@@ -346,10 +346,9 @@ export const columnRenderers = {
       'PENDING': { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Not Sent' },
       'GUEST': { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Guest' },
       'USED': { bg: 'bg-red-100', text: 'text-red-800', label: 'Used' },
-      'ACTIVE': { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' },
-      'CREATED': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Created' },
-      'EXPIRED': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Expired' },
-      'INACTIVE': { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Inactive' }
+      'GENERATED': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Generated' },
+      'CREATED': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Created' },
+      'EXPIRED': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Expired' }
     }
 
     const config = statusConfig[value] || { bg: 'bg-gray-100', text: 'text-gray-800', label: value || 'No Response' }
@@ -393,19 +392,21 @@ export const columnRenderers = {
   // QR status
   qrStatus: (value: any, row: any) => {
     const qrCode = row.qrCodes?.[0]
-    let config = { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Inactive' }
+    let config = { bg: 'bg-gray-100', text: 'text-gray-800', label: 'No QR Code' }
 
     if (qrCode) {
       if (qrCode.status === 'USED') {
         config = { bg: 'bg-red-100', text: 'text-red-800', label: 'Used' }
-      } else if (qrCode.status === 'ACTIVE') {
-        config = { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' }
+      } else if (qrCode.status === 'SENT') {
+        config = { bg: 'bg-green-100', text: 'text-green-800', label: 'Sent' }
+      } else if (qrCode.status === 'GENERATED') {
+        config = { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Generated' }
       } else if (qrCode.status === 'CREATED') {
-        config = { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Created' }
+        config = { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Created' }
       } else if (qrCode.status === 'EXPIRED') {
         config = { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Expired' }
       } else {
-        config = { bg: 'bg-yellow-100', text: 'text-yellow-800', label: qrCode.status }
+        config = { bg: 'bg-gray-100', text: 'text-gray-800', label: qrCode.status }
       }
     }
 

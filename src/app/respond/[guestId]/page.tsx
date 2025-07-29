@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { CheckCircle, XCircle, UserPlus, Calendar, MapPin, Mail, Users } from 'lucide-react'
+import { CheckCircle, XCircle, UserPlus, Calendar, MapPin, Mail, Users, ArrowLeft, Gift } from 'lucide-react'
 import { getButtonClasses, componentStyles } from '@/lib/design-system'
 
 interface Guest {
@@ -38,7 +38,9 @@ export default function RespondPage() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [plusOneEmail, setPlusOneEmail] = useState('')
+  const [plusOneName, setPlusOneName] = useState('')
   const [showPlusOneForm, setShowPlusOneForm] = useState(false)
+  const [selectedResponse, setSelectedResponse] = useState<string | null>(null)
 
   useEffect(() => {
     if (guestId) {
@@ -49,6 +51,7 @@ export default function RespondPage() {
   useEffect(() => {
     if (response && guest && event && !submitted) {
       if (response === 'coming_with_plus_one') {
+        setSelectedResponse('coming_with_plus_one')
         setShowPlusOneForm(true)
       } else {
         handleResponse(response)
@@ -117,6 +120,10 @@ export default function RespondPage() {
       setError('Please enter your guest\'s email')
       return
     }
+    if (!plusOneName.trim()) {
+      setError('Please enter your guest\'s name')
+      return
+    }
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(plusOneEmail)) {
@@ -126,9 +133,21 @@ export default function RespondPage() {
     handleResponse('coming_with_plus_one')
   }
 
+  const handleResponseSelection = (responseType: string) => {
+    setSelectedResponse(responseType)
+    setError(null)
+    
+    if (responseType === 'coming_with_plus_one') {
+      setShowPlusOneForm(true)
+    } else {
+      setShowPlusOneForm(false)
+      handleResponse(responseType)
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading invitation...</p>
@@ -139,7 +158,7 @@ export default function RespondPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Error</h1>
@@ -151,7 +170,7 @@ export default function RespondPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Response Submitted!</h1>
@@ -185,7 +204,7 @@ export default function RespondPage() {
 
   if (!guest || !event) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Invitation Not Found</h1>
@@ -196,35 +215,31 @@ export default function RespondPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">You're Invited!</h1>
-          <p className="text-gray-600">Please respond to your invitation</p>
+          <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Gift className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">You're Invited!</h1>
+          <p className="text-gray-600 text-lg">Please respond to your invitation</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Event Details Card */}
-          <div className={`${componentStyles.card.base} lg:col-span-2`}>
-            <div className={componentStyles.card.header}>
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <Calendar className="w-5 h-5 mr-2" />
-                Event Details
-              </h2>
-            </div>
-            <div className={componentStyles.card.content}>
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">{event.name}</h3>
-                {event.description && (
-                  <p className="text-gray-600 mb-6">{event.description}</p>
-                )}
-              </div>
+        {/* Main Card */}
+        <div className={`${componentStyles.card.base} shadow-xl`}>
+          <div className="p-8">
+            {/* Event Details */}
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">{event.name}</h2>
+              {event.description && (
+                <p className="text-gray-600 mb-6">{event.description}</p>
+              )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div className="flex items-center justify-center p-4 bg-blue-50 rounded-lg">
                   <Calendar className="w-5 h-5 text-blue-600 mr-3" />
-                  <div>
+                  <div className="text-left">
                     <p className="text-sm text-gray-500">Date</p>
                     <p className="font-semibold text-gray-900">
                       {new Date(event.date).toLocaleDateString('en-US', {
@@ -238,9 +253,9 @@ export default function RespondPage() {
                 </div>
                 
                 {event.location && (
-                  <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-center p-4 bg-blue-50 rounded-lg">
                     <MapPin className="w-5 h-5 text-blue-600 mr-3" />
-                    <div>
+                    <div className="text-left">
                       <p className="text-sm text-gray-500">Location</p>
                       <p className="font-semibold text-gray-900">{event.location}</p>
                     </div>
@@ -248,115 +263,151 @@ export default function RespondPage() {
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Guest Info & Response Card */}
-          <div className="space-y-6">
-            {/* Guest Info Card */}
-            <div className={`${componentStyles.card.base}`}>
-              <div className={componentStyles.card.header}>
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Users className="w-5 h-5 mr-2" />
-                  Invited Guest
-                </h3>
+            {/* Guest Info */}
+            <div className="text-center mb-8 p-6 bg-gray-50 rounded-lg">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Mail className="w-8 h-8 text-blue-600" />
               </div>
-              <div className={componentStyles.card.content}>
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Mail className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <h4 className="font-semibold text-gray-900 text-lg">
-                    {guest.firstName} {guest.lastName}
-                  </h4>
-                  {guest.company && (
-                    <p className="text-sm text-gray-600 mt-1">{guest.company}</p>
-                  )}
-                  {guest.isVip && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mt-2">
-                      VIP Guest
-                    </span>
-                  )}
-                </div>
-              </div>
+              <h3 className="font-semibold text-gray-900 text-xl mb-2">
+                {guest.firstName} {guest.lastName}
+              </h3>
+              {guest.company && (
+                <p className="text-gray-600 mb-2">{guest.company}</p>
+              )}
+              {guest.isVip && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                  <Gift className="w-4 h-4 mr-1" />
+                  VIP Guest
+                </span>
+              )}
             </div>
 
-            {/* Response Options Card */}
-            <div className={`${componentStyles.card.base}`}>
-              <div className={componentStyles.card.header}>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Will you be attending?
-                </h3>
-              </div>
-              <div className={componentStyles.card.content}>
-                {!showPlusOneForm ? (
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => handleResponse('coming')}
-                      disabled={submitting}
-                      className={`${getButtonClasses('success')} w-full py-3`}
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                      Yes, I'm Coming
-                    </button>
+            {/* Response Section */}
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold text-gray-900 text-center">
+                Will you be attending?
+              </h3>
 
-                    <button
-                      onClick={() => setShowPlusOneForm(true)}
-                      disabled={submitting}
-                      className={`${getButtonClasses('primary')} w-full py-3`}
-                    >
-                      <UserPlus className="w-5 h-5" />
-                      Yes, I'm Coming with a Guest
-                    </button>
+              {!showPlusOneForm ? (
+                <div className="space-y-4">
+                  <button
+                    onClick={() => handleResponseSelection('coming')}
+                    disabled={submitting}
+                    className={`w-full p-4 rounded-lg border-2 transition-all duration-200 ${
+                      selectedResponse === 'coming'
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50'
+                    } ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-center justify-center">
+                      <CheckCircle className="w-6 h-6 mr-3" />
+                      <span className="text-lg font-medium">Yes, I'm Coming</span>
+                    </div>
+                  </button>
 
-                    <button
-                      onClick={() => handleResponse('not_coming')}
-                      disabled={submitting}
-                      className={`${getButtonClasses('danger')} w-full py-3`}
-                    >
-                      <XCircle className="w-5 h-5" />
-                      No, I Can't Come
-                    </button>
+                  <button
+                    onClick={() => handleResponseSelection('coming_with_plus_one')}
+                    disabled={submitting}
+                    className={`w-full p-4 rounded-lg border-2 transition-all duration-200 ${
+                      selectedResponse === 'coming_with_plus_one'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+                    } ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-center justify-center">
+                      <UserPlus className="w-6 h-6 mr-3" />
+                      <span className="text-lg font-medium">Yes, I'm Coming with a Guest</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleResponseSelection('not_coming')}
+                    disabled={submitting}
+                    className={`w-full p-4 rounded-lg border-2 transition-all duration-200 ${
+                      selectedResponse === 'not_coming'
+                        ? 'border-red-500 bg-red-50 text-red-700'
+                        : 'border-gray-200 bg-white hover:border-red-300 hover:bg-red-50'
+                    } ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-center justify-center">
+                      <XCircle className="w-6 h-6 mr-3" />
+                      <span className="text-lg font-medium">No, I Can't Come</span>
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">Guest Information</h4>
+                    <p className="text-sm text-blue-700">Please provide your guest's details so we can send them an invitation.</p>
                   </div>
-                ) : (
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Guest's Email
+                        Guest's Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={plusOneName}
+                        onChange={(e) => setPlusOneName(e.target.value)}
+                        placeholder="Enter your guest's full name"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Guest's Email *
                       </label>
                       <input
                         type="email"
                         value={plusOneEmail}
                         onChange={(e) => setPlusOneEmail(e.target.value)}
                         placeholder="Enter your guest's email address"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
                       />
                     </div>
-
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={() => setShowPlusOneForm(false)}
-                        className={`${getButtonClasses('outline')} flex-1`}
-                      >
-                        Back
-                      </button>
-                      <button
-                        onClick={handlePlusOneResponse}
-                        disabled={submitting || !plusOneEmail.trim()}
-                        className={`${getButtonClasses('primary')} flex-1`}
-                      >
-                        {submitting ? 'Submitting...' : 'Confirm with Guest'}
-                      </button>
-                    </div>
                   </div>
-                )}
 
-                {submitting && (
-                  <div className="text-center mt-6">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-sm text-gray-600">Submitting your response...</p>
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={() => {
+                        setShowPlusOneForm(false)
+                        setSelectedResponse(null)
+                        setPlusOneEmail('')
+                        setPlusOneName('')
+                        setError(null)
+                      }}
+                      className={`${getButtonClasses('outline')} flex-1 py-3`}
+                    >
+                      <ArrowLeft className="w-5 h-5 mr-2" />
+                      Back
+                    </button>
+                    <button
+                      onClick={handlePlusOneResponse}
+                      disabled={submitting || !plusOneEmail.trim() || !plusOneName.trim()}
+                      className={`${getButtonClasses('primary')} flex-1 py-3`}
+                    >
+                      {submitting ? 'Submitting...' : 'Confirm with Guest'}
+                    </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+              )}
+
+              {submitting && (
+                <div className="text-center py-6">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-sm text-gray-600">Submitting your response...</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
