@@ -291,6 +291,9 @@ export async function sendRegularInvitation(guestId: string, eventId?: string) {
   // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
   const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
   const responseUrl = `${baseUrl}/respond/${guestId}?eventId=${event.id}`
+  
+  const comingUrl = `${responseUrl}&response=coming`
+  const notComingUrl = `${responseUrl}&response=not_coming`
 
   const html = `
     <!DOCTYPE html>
@@ -347,10 +350,10 @@ export async function sendRegularInvitation(guestId: string, eventId?: string) {
           <!-- Response Buttons -->
           <div style="text-align: center; margin: 40px 0;">
             <div style="margin-bottom: 20px;">
-              <a href="${responseUrl}&response=coming" style="background: #4CAF50; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; margin: 0 10px 10px 0;">
+              <a href="${comingUrl}" style="background: #4CAF50; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; margin: 0 10px 10px 0;">
                 I'm Coming
               </a>
-              <a href="${responseUrl}&response=not_coming" style="background: #f44336; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; margin: 0 10px 10px 0;">
+              <a href="${notComingUrl}" style="background: #f44336; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; margin: 0 10px 10px 0;">
                 I Can't Come
               </a>
             </div>
@@ -644,6 +647,9 @@ export async function sendVIPInvitation(guestId: string, eventId?: string) {
   // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
   const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
   const responseUrl = `${baseUrl}/respond/${guestId}?eventId=${event.id}`
+  
+  const comingUrl = `${responseUrl}&response=coming`
+  const notComingUrl = `${responseUrl}&response=not_coming`
 
   const html = `
     <!DOCTYPE html>
@@ -707,10 +713,10 @@ export async function sendVIPInvitation(guestId: string, eventId?: string) {
           <!-- Response Buttons -->
           <div style="text-align: center; margin: 40px 0;">
             <div style="margin-bottom: 20px;">
-              <a href="${responseUrl}&response=coming" style="background: #4CAF50; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; margin: 0 10px 10px 0;">
+              <a href="${comingUrl}" style="background: #4CAF50; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; margin: 0 10px 10px 0;">
                 I'm Coming
               </a>
-              <a href="${responseUrl}&response=not_coming" style="background: #f44336; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; margin: 0 10px 10px 0;">
+              <a href="${notComingUrl}" style="background: #f44336; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; margin: 0 10px 10px 0;">
                 I Can't Come
               </a>
             </div>

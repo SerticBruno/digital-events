@@ -41,9 +41,8 @@ export async function POST(request: NextRequest) {
         i."plusOneEmail"
       FROM guests g
       JOIN event_guests eg ON g.id = eg."guestId"
-      LEFT JOIN invitations i ON g.id = i."guestId" AND eg."eventId" = i."eventId"
+      LEFT JOIN invitations i ON g.id = i."guestId" AND eg."eventId" = i."eventId" AND i.type = 'INVITATION'
       WHERE eg."eventId" = ${eventId}
-      AND i.type = 'INVITATION'
       ORDER BY g."lastName", g."firstName"
     `
 
@@ -55,8 +54,11 @@ export async function POST(request: NextRequest) {
 
     for (const guest of guestsWithResponses) {
       try {
+        console.log(`Processing guest: ${guest.firstName} ${guest.lastName}, response: ${guest.response}`)
+        
         // Skip guests who haven't responded
         if (!guest.response) {
+          console.log(`Skipping guest ${guest.firstName} ${guest.lastName} - no response`)
           results.push({
             guestId: guest.id,
             guestName: `${guest.firstName} ${guest.lastName}`,
@@ -68,6 +70,7 @@ export async function POST(request: NextRequest) {
 
         // Skip guests who responded "NOT_COMING"
         if (guest.response === 'NOT_COMING') {
+          console.log(`Skipping guest ${guest.firstName} ${guest.lastName} - declined invitation`)
           results.push({
             guestId: guest.id,
             guestName: `${guest.firstName} ${guest.lastName}`,
@@ -79,6 +82,7 @@ export async function POST(request: NextRequest) {
 
         // Handle different response scenarios
         if (guest.response === 'COMING') {
+          console.log(`Processing guest ${guest.firstName} ${guest.lastName} - coming alone`)
           // Guest is coming alone - check if QR code already exists
           const qrType: 'REGULAR' | 'VIP' = guest.isVip ? 'VIP' : 'REGULAR'
           
@@ -190,6 +194,7 @@ export async function POST(request: NextRequest) {
             })
           }
         } else if (guest.response === 'COMING_WITH_PLUS_ONE') {
+          console.log(`Processing guest ${guest.firstName} ${guest.lastName} - coming with plus-one`)
           // Guest is coming with plus-one - check for existing QR codes first
           const qrType: 'REGULAR' | 'VIP' = guest.isVip ? 'VIP' : 'REGULAR'
           
@@ -339,6 +344,15 @@ export async function POST(request: NextRequest) {
           }
           
           continue // Skip the regular QR generation loop for this guest
+        } else {
+          // Handle any other response types
+          console.log(`Unknown response type for guest ${guest.firstName} ${guest.lastName}: ${guest.response}`)
+          results.push({
+            guestId: guest.id,
+            guestName: `${guest.firstName} ${guest.lastName}`,
+            status: 'skipped',
+            reason: `Unknown response type: ${guest.response}`
+          })
         }
 
 
