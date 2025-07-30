@@ -5,7 +5,7 @@ import { generateQRCode } from '@/lib/qr'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { guestId, eventId, testEmail } = body
+    const { guestId, eventId } = body
 
     if (!guestId || !eventId) {
       return NextResponse.json(
