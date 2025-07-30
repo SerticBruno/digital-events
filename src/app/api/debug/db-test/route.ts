@@ -9,19 +9,57 @@ export async function GET() {
     await prisma.$connect()
     console.log('Database connection successful')
     
-    // Test basic query
-    const guestCount = await prisma.guest.count()
-    console.log(`Guest count: ${guestCount}`)
+    // Test if tables exist by checking table names
+    const tables = await prisma.$queryRaw<Array<{ tablename: string }>>`
+      SELECT tablename 
+      FROM pg_tables 
+      WHERE schemaname = 'public'
+    `
+    console.log('Available tables:', tables.map(t => t.tablename))
     
-    // Test event query
-    const eventCount = await prisma.event.count()
-    console.log(`Event count: ${eventCount}`)
+    // Test basic queries with error handling
+    let guestCount = 0
+    let eventCount = 0
+    let guestError = null
+    let eventError = null
+    
+    try {
+      guestCount = await prisma.guest.count()
+      console.log(`Guest count: ${guestCount}`)
+    } catch (error) {
+      guestError = error instanceof Error ? error.message : 'Unknown error'
+      console.error('Guest count error:', guestError)
+    }
+    
+    try {
+      eventCount = await prisma.event.count()
+      console.log(`Event count: ${eventCount}`)
+    } catch (error) {
+      eventError = error instanceof Error ? error.message : 'Unknown error'
+      console.error('Event count error:', eventError)
+    }
+    
+    // Test a simple guest query
+    let sampleGuests = []
+    try {
+      sampleGuests = await prisma.guest.findMany({
+        take: 5,
+        select: { id: true, email: true, firstName: true, lastName: true }
+      })
+      console.log('Sample guests:', sampleGuests)
+    } catch (error) {
+      console.error('Sample guests query error:', error)
+    }
     
     return NextResponse.json({
       status: 'success',
       message: 'Database connection and queries working',
+      tables: tables.map(t => t.tablename),
       guestCount,
       eventCount,
+      guestError,
+      eventError,
+      sampleGuests,
       timestamp: new Date().toISOString()
     })
     

@@ -23,6 +23,10 @@ export async function GET() {
   try {
     console.log('Fetching all guests...')
     
+    // Test database connection first
+    await prisma.$connect()
+    console.log('Database connected successfully')
+    
     // Get all guests
     const guests = await prisma.guest.findMany({
       select: {
@@ -82,8 +86,14 @@ export async function GET() {
   } catch (error) {
     console.error('Get all guests error:', error)
     return NextResponse.json(
-      { error: 'Failed to get guests' },
+      { 
+        error: 'Failed to get guests',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     )
+  } finally {
+    await prisma.$disconnect()
   }
 } 
