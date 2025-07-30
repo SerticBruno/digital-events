@@ -15,11 +15,11 @@ export async function POST() {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       description TEXT,
-      date DATETIME NOT NULL,
+      date TIMESTAMP NOT NULL,
       location TEXT,
       maxGuests INTEGER,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`
     
     await prisma.$executeRaw`CREATE TABLE IF NOT EXISTS guests (
@@ -33,15 +33,15 @@ export async function POST() {
       isVip BOOLEAN DEFAULT FALSE,
       isPlusOne BOOLEAN DEFAULT FALSE,
       canHavePlusOne BOOLEAN DEFAULT FALSE,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`
     
     await prisma.$executeRaw`CREATE TABLE IF NOT EXISTS event_guests (
       id TEXT PRIMARY KEY,
       eventId TEXT NOT NULL,
       guestId TEXT NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (eventId) REFERENCES events(id) ON DELETE CASCADE,
       FOREIGN KEY (guestId) REFERENCES guests(id) ON DELETE CASCADE,
       UNIQUE(eventId, guestId)
@@ -51,17 +51,17 @@ export async function POST() {
       id TEXT PRIMARY KEY,
       type TEXT NOT NULL,
       status TEXT DEFAULT 'PENDING',
-      sentAt DATETIME,
-      openedAt DATETIME,
-      respondedAt DATETIME,
+      sentAt TIMESTAMP,
+      openedAt TIMESTAMP,
+      respondedAt TIMESTAMP,
       response TEXT,
       hasPlusOne BOOLEAN DEFAULT FALSE,
       plusOneName TEXT,
       plusOneEmail TEXT,
       guestId TEXT NOT NULL,
       eventId TEXT NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (guestId) REFERENCES guests(id) ON DELETE CASCADE,
       FOREIGN KEY (eventId) REFERENCES events(id) ON DELETE CASCADE
     )`
@@ -71,10 +71,10 @@ export async function POST() {
       code TEXT UNIQUE NOT NULL,
       type TEXT NOT NULL,
       status TEXT DEFAULT 'CREATED',
-      usedAt DATETIME,
+      usedAt TIMESTAMP,
       guestId TEXT NOT NULL,
       eventId TEXT NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (guestId) REFERENCES guests(id) ON DELETE CASCADE,
       FOREIGN KEY (eventId) REFERENCES events(id) ON DELETE CASCADE
     )`
@@ -83,7 +83,7 @@ export async function POST() {
       id TEXT PRIMARY KEY,
       rating INTEGER NOT NULL,
       feedback TEXT,
-      submittedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      submittedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       guestId TEXT UNIQUE NOT NULL,
       eventId TEXT NOT NULL,
       FOREIGN KEY (guestId) REFERENCES guests(id) ON DELETE CASCADE,
