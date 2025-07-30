@@ -246,10 +246,9 @@ export async function POST(request: NextRequest) {
           // For other email types (qr_code, survey, etc.), don't update invitation status
 
           results.push({ guestId, success: true, message: 'Email sent successfully' })
-        } else {
+                } else {
           console.error(`Failed to send email to guest ${guestId}:`, result.error)
-          const errorMessage = result.error instanceof Error ? result.error.message : 
-                              typeof result.error === 'string' ? result.error : 
+          const errorMessage = typeof result.error === 'string' ? result.error :
                               JSON.stringify(result.error)
           results.push({ guestId, success: false, error: errorMessage })
         }

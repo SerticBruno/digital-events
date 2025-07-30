@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     // Check environment variables
     const envCheck = {
