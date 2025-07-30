@@ -49,10 +49,10 @@ export async function GET(request: NextRequest) {
         eventId: string;
         eventName: string;
       }>>`
-        SELECT eg.guestId, e.id as eventId, e.name as eventName
+        SELECT eg."guestId", e.id as "eventId", e.name as "eventName"
         FROM event_guests eg
-        JOIN events e ON eg.eventId = e.id
-        WHERE eg.guestId IN (${guests.map(g => g.id).join(',')})
+        JOIN events e ON eg."eventId" = e.id
+        WHERE eg."guestId" IN (${guests.map(g => g.id).join(',')})
       `
     }
 
