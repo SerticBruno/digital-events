@@ -25,12 +25,14 @@ export async function validateQRCode(code: string, eventId: string) {
 
     const qrCode = qrCodeRecord[0]
 
-    // Mark QR code as used
-    await prisma.$executeRaw`
-      UPDATE qr_codes 
-      SET status = 'USED', "usedAt" = datetime('now')
-      WHERE id = ${qrCode.id}
-    `
+    // Mark QR code as used using Prisma ORM
+    await prisma.qRCode.update({
+      where: { id: qrCode.id },
+      data: {
+        status: 'USED',
+        usedAt: new Date()
+      }
+    })
 
     // Get guest information
     const guestRecord = await prisma.$queryRaw<Array<{
@@ -81,11 +83,16 @@ export async function generateQRCode(guestId: string, eventId: string, type: 'RE
     // Generate unique QR code
     const code = `QR-${randomUUID().substring(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
 
-    // Insert QR code into database with GENERATED status
-    await prisma.$executeRaw`
-      INSERT INTO qr_codes (id, code, type, "guestId", "eventId", status, "createdAt")
-      VALUES (${randomUUID()}, ${code}, ${type}, ${guestId}, ${eventId}, 'GENERATED', datetime('now'))
-    `
+    // Insert QR code into database with GENERATED status using Prisma ORM
+    await prisma.qRCode.create({
+      data: {
+        code,
+        type,
+        guestId,
+        eventId,
+        status: 'GENERATED'
+      }
+    })
 
     return {
       success: true,
@@ -149,11 +156,16 @@ export async function generatePlusOneQRCode(guestId: string, eventId: string, ty
     // Generate unique QR code for plus-one
     const code = `QR-PLUS-${randomUUID().substring(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
 
-    // Insert QR code into database with plus-one identifier and GENERATED status
-    await prisma.$executeRaw`
-      INSERT INTO qr_codes (id, code, type, "guestId", "eventId", status, "createdAt")
-      VALUES (${randomUUID()}, ${code}, ${type}, ${guestId}, ${eventId}, 'GENERATED', datetime('now'))
-    `
+    // Insert QR code into database with plus-one identifier and GENERATED status using Prisma ORM
+    await prisma.qRCode.create({
+      data: {
+        code,
+        type,
+        guestId,
+        eventId,
+        status: 'GENERATED'
+      }
+    })
 
     return {
       success: true,
@@ -172,14 +184,19 @@ export async function generatePlusOneQRCode(guestId: string, eventId: string, ty
 
 export async function regenerateQRCode(guestId: string, eventId: string, type: 'REGULAR' | 'VIP' = 'REGULAR') {
   try {
-    // Invalidate existing QR codes for this guest and event
-    await prisma.$executeRaw`
-      UPDATE qr_codes 
-      SET status = 'EXPIRED'
-      WHERE "guestId" = ${guestId} 
-      AND "eventId" = ${eventId}
-      AND status IN ('GENERATED', 'SENT')
-    `
+    // Invalidate existing QR codes for this guest and event using Prisma ORM
+    await prisma.qRCode.updateMany({
+      where: {
+        guestId,
+        eventId,
+        status: {
+          in: ['GENERATED', 'SENT']
+        }
+      },
+      data: {
+        status: 'EXPIRED'
+      }
+    })
 
     // Generate new QR code
     return await generateQRCode(guestId, eventId, type)
@@ -196,12 +213,15 @@ export async function updateQRCodeStatus(guestId: string, eventId: string, statu
   try {
     console.log(`updateQRCodeStatus called: guestId=${guestId}, eventId=${eventId}, status=${status}`)
     
-    const result = await prisma.$executeRaw`
-      UPDATE qr_codes 
-      SET status = ${status}
-      WHERE "guestId" = ${guestId} 
-      AND "eventId" = ${eventId}
-    `
+    const result = await prisma.qRCode.updateMany({
+      where: {
+        guestId,
+        eventId
+      },
+      data: {
+        status
+      }
+    })
     
     console.log(`updateQRCodeStatus result:`, result)
 
@@ -220,13 +240,18 @@ export async function updateQRCodeStatus(guestId: string, eventId: string, statu
 
 export async function activateAllQRCodesForGuest(guestId: string, eventId: string) {
   try {
-    await prisma.$executeRaw`
-      UPDATE qr_codes 
-      SET status = 'SENT'
-      WHERE "guestId" = ${guestId} 
-      AND "eventId" = ${eventId}
-      AND status IN ('CREATED', 'GENERATED')
-    `
+    await prisma.qRCode.updateMany({
+      where: {
+        guestId,
+        eventId,
+        status: {
+          in: ['CREATED', 'GENERATED']
+        }
+      },
+      data: {
+        status: 'SENT'
+      }
+    })
 
     return {
       success: true,

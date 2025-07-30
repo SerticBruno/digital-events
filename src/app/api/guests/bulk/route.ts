@@ -49,35 +49,31 @@ export async function POST(request: NextRequest) {
         })
 
         if (!guest) {
-          // Create new guest using raw SQL
-          const guestId = randomUUID()
-          await prisma.$executeRaw`
-            INSERT INTO guests (id, email, firstName, lastName, company, position, phone, isVip, isPlusOne, canHavePlusOne, createdAt, updatedAt)
-            VALUES (${guestId}, ${guestData.email}, ${guestData.firstName}, ${guestData.lastName}, ${guestData.company || null}, ${guestData.position || null}, ${guestData.phone || null}, ${guestData.isVip || false}, false, false, datetime('now'), datetime('now'))
-          `
-          guest = {
-            id: guestId,
-            email: guestData.email,
-            firstName: guestData.firstName,
-            lastName: guestData.lastName,
-            company: guestData.company || null,
-            position: guestData.position || null,
-            phone: guestData.phone || null,
-            isVip: guestData.isVip || false,
-            isPlusOne: false,
-            canHavePlusOne: false,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          } as unknown as { id: string; email: string; firstName: string; lastName: string; company: string | null; position: string | null; phone: string | null; isVip: boolean; isPlusOne: boolean; canHavePlusOne: boolean; createdAt: Date; updatedAt: Date; eventId: string }
+          // Create new guest using Prisma ORM
+          guest = await prisma.guest.create({
+            data: {
+              email: guestData.email,
+              firstName: guestData.firstName,
+              lastName: guestData.lastName,
+              company: guestData.company || null,
+              position: guestData.position || null,
+              phone: guestData.phone || null,
+              isVip: guestData.isVip || false,
+              isPlusOne: false,
+              canHavePlusOne: false
+            }
+          })
         }
 
-        // Check if guest is already in this event using raw SQL
-        const existingEventGuest = await prisma.$queryRaw<Array<{ guestId: string }>>`
-          SELECT guestId FROM event_guests 
-          WHERE eventId = ${eventId} AND guestId = ${guest!.id}
-        `
+        // Check if guest is already in this event using Prisma ORM
+        const existingEventGuest = await prisma.eventGuest.findFirst({
+          where: {
+            eventId,
+            guestId: guest!.id
+          }
+        })
 
-        if (existingEventGuest.length > 0) {
+        if (existingEventGuest) {
           errors.push({
             email: guestData.email,
             error: 'Guest already exists for this event'
@@ -85,11 +81,13 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Add guest to event using raw SQL
-        await prisma.$executeRaw`
-          INSERT INTO event_guests (id, eventId, guestId, createdAt) 
-          VALUES (${randomUUID()}, ${eventId}, ${guest!.id}, datetime('now'))
-        `
+        // Add guest to event using Prisma ORM
+        await prisma.eventGuest.create({
+          data: {
+            eventId,
+            guestId: guest!.id
+          }
+        })
 
         // Create invitation with PENDING status for the new guest (not sent yet)
         await prisma.invitation.create({

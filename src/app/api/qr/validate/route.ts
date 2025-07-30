@@ -38,12 +38,14 @@ export async function POST(request: NextRequest) {
 
     const qrCode = qrCodeRecord[0]
 
-    // Mark QR code as used
-    await prisma.$executeRaw`
-      UPDATE qr_codes 
-      SET status = 'USED', "usedAt" = datetime('now')
-      WHERE id = ${qrCode.id}
-    `
+    // Mark QR code as used using Prisma ORM
+    await prisma.qRCode.update({
+      where: { id: qrCode.id },
+      data: {
+        status: 'USED',
+        usedAt: new Date()
+      }
+    })
 
     // Get guest information
     const guestRecord = await prisma.$queryRaw<Array<{
