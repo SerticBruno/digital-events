@@ -33,6 +33,10 @@ export async function sendTestEmail(to: string) {
 
 export async function sendEmail(data: EmailData) {
   try {
+    console.log('sendEmail called with:', { to: data.to, subject: data.subject })
+    console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY)
+    console.log('FROM_EMAIL:', process.env.FROM_EMAIL)
+    
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -49,33 +53,40 @@ export async function sendEmail(data: EmailData) {
 
     if (!response.ok) {
       const error = await response.text()
+      console.error('Resend API error response:', error)
       throw new Error(error)
     }
 
+    console.log('Email sent successfully')
     return { success: true }
   } catch (error) {
     console.error('Failed to send email:', error)
-    return { success: false, error }
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' }
   }
 }
 
 export async function sendSaveTheDate(guestId: string, eventId?: string) {
-  // Get guest data using raw SQL
-  const guests = await prisma.$queryRaw<Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    company: string | null;
-    isVip: boolean;
-  }>>`
-    SELECT id, "firstName", "lastName", email, company, "isVip"
-    FROM guests
-    WHERE id = ${guestId}
-  `
+  try {
+    console.log('sendSaveTheDate called with:', { guestId, eventId })
+    
+    // Get guest data using raw SQL
+    const guests = await prisma.$queryRaw<Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      company: string | null;
+      isVip: boolean;
+    }>>`
+      SELECT id, "firstName", "lastName", email, company, "isVip"
+      FROM guests
+      WHERE id = ${guestId}
+    `
 
-  if (guests.length === 0) throw new Error('Guest not found')
-  const guest = guests[0]
+    console.log('Guest query result:', guests)
+
+    if (guests.length === 0) throw new Error('Guest not found')
+    const guest = guests[0]
 
   // Get event data using raw SQL
   let eventGuests: Array<{
@@ -209,11 +220,17 @@ export async function sendSaveTheDate(guestId: string, eventId?: string) {
     </html>
   `
 
+  console.log('About to send email to:', guest.email, 'for event:', event.name)
+  
   return sendEmail({
     to: guest.email,
     subject: `Save the Date: ${event.name}`,
     html
   })
+  } catch (error) {
+    console.error('Error in sendSaveTheDate:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' }
+  }
 }
 
 export async function sendRegularInvitation(guestId: string, eventId?: string) {

@@ -186,7 +186,10 @@ export async function POST(request: NextRequest) {
           results.push({ guestId, success: true, message: 'Email sent successfully' })
         } else {
           console.error(`Failed to send email to guest ${guestId}:`, result.error)
-          results.push({ guestId, success: false, error: result.error })
+          const errorMessage = result.error instanceof Error ? result.error.message : 
+                              typeof result.error === 'string' ? result.error : 
+                              JSON.stringify(result.error)
+          results.push({ guestId, success: false, error: errorMessage })
         }
       } catch (error) {
         console.error(`Failed to send email to guest ${guestId}:`, error)
