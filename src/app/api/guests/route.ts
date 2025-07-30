@@ -73,7 +73,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Failed to fetch guests:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch guests' },
+      { 
+        error: 'Failed to fetch guests',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
@@ -100,12 +103,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('Checking for existing guest with email:', email)
+    
     // Check if guest already exists globally
     let guest = await prisma.guest.findUnique({
       where: { email }
     })
 
+    console.log('Existing guest found:', guest ? 'Yes' : 'No')
+
     if (!guest) {
+      console.log('Creating new guest...')
       // Create new guest using Prisma ORM instead of raw SQL
       guest = await prisma.guest.create({
         data: {
@@ -120,8 +128,11 @@ export async function POST(request: NextRequest) {
           canHavePlusOne: false
         }
       })
+      console.log('Guest created successfully:', guest.id)
     }
 
+    console.log('Checking if guest is already in event:', { eventId, guestId: guest!.id })
+    
     // Check if guest is already in this event using Prisma ORM
     const existingEventGuest = await prisma.eventGuest.findFirst({
       where: {
@@ -130,7 +141,10 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    console.log('Existing event guest found:', existingEventGuest ? 'Yes' : 'No')
+
     if (existingEventGuest) {
+      console.log('Guest already exists for this event')
       return NextResponse.json(
         { error: 'Guest already exists for this event' },
         { status: 409 }
