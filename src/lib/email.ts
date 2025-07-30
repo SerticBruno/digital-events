@@ -1602,7 +1602,8 @@ export async function sendSurvey(guestId: string, eventId?: string) {
     maxGuests: eventData.eventMaxGuests
   }
   // Create tracking URL for survey completion
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  // Use TEST_URL for surveys if available, otherwise fall back to NEXTAUTH_URL or localhost
+  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
   const trackingUrl = `${baseUrl}/api/surveys/complete/${guest.id}?eventId=${event.id}`
   
   const html = `

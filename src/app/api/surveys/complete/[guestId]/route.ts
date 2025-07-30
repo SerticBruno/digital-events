@@ -7,6 +7,8 @@ export async function GET(
 ) {
   try {
     console.log('Survey completion API called')
+    console.log('Request URL:', request.url)
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()))
     
     const { guestId } = await params
     const { searchParams } = new URL(request.url)
@@ -18,22 +20,41 @@ export async function GET(
       console.error('Missing required parameters:', { guestId, eventId })
       return NextResponse.json(
         { error: 'Guest ID and Event ID are required' },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
       )
     }
 
     // Verify the guest exists and is associated with the event
     console.log('Checking guest existence...')
-    const guest = await prisma.guest.findFirst({
-      where: {
-        id: guestId,
-        eventGuests: {
-          some: {
-            eventId: eventId
+    let guest
+    try {
+      guest = await prisma.guest.findFirst({
+        where: {
+          id: guestId,
+          eventGuests: {
+            some: {
+              eventId: eventId
+            }
           }
         }
-      }
-    })
+      })
+    } catch (dbError) {
+      console.error('Database error when checking guest:', dbError)
+      return NextResponse.json(
+        { error: 'Database error when checking guest' },
+        { 
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      )
+    }
 
     console.log('Guest found:', guest ? 'Yes' : 'No')
 
@@ -41,19 +62,38 @@ export async function GET(
       console.error('Guest not found or not associated with event:', { guestId, eventId })
       return NextResponse.json(
         { error: 'Guest not found or not associated with this event' },
-        { status: 404 }
+        { 
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
       )
     }
 
     // Check if survey invitation exists
     console.log('Checking survey invitation...')
-    const surveyInvitation = await prisma.invitation.findFirst({
-      where: {
-        guestId: guestId,
-        eventId: eventId,
-        type: 'SURVEY'
-      }
-    })
+    let surveyInvitation
+    try {
+      surveyInvitation = await prisma.invitation.findFirst({
+        where: {
+          guestId: guestId,
+          eventId: eventId,
+          type: 'SURVEY'
+        }
+      })
+    } catch (dbError) {
+      console.error('Database error when checking survey invitation:', dbError)
+      return NextResponse.json(
+        { error: 'Database error when checking survey invitation' },
+        { 
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      )
+    }
 
     console.log('Survey invitation found:', surveyInvitation ? 'Yes' : 'No')
 
@@ -61,7 +101,12 @@ export async function GET(
       console.error('Survey invitation not found for:', { guestId, eventId })
       return NextResponse.json(
         { error: 'Survey invitation not found' },
-        { status: 404 }
+        { 
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
       )
     }
 
@@ -86,28 +131,56 @@ export async function GET(
 
     // Create a survey record to mark as completed
     console.log('Creating survey record...')
-    const newSurvey = await prisma.survey.create({
-      data: {
-        guestId: guestId,
-        eventId: eventId,
-        rating: 0, // Default rating, will be updated when they actually complete the form
-        feedback: 'Survey link clicked - completion tracked'
-      }
-    })
+    let newSurvey
+    try {
+      newSurvey = await prisma.survey.create({
+        data: {
+          guestId: guestId,
+          eventId: eventId,
+          rating: 0, // Default rating, will be updated when they actually complete the form
+          feedback: 'Survey link clicked - completion tracked'
+        }
+      })
+    } catch (dbError) {
+      console.error('Database error when creating survey record:', dbError)
+      return NextResponse.json(
+        { error: 'Database error when creating survey record' },
+        { 
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      )
+    }
 
     console.log('Survey record created:', newSurvey.id)
 
     // Update the invitation status to opened
     console.log('Updating invitation status...')
-    const updatedInvitation = await prisma.invitation.update({
-      where: {
-        id: surveyInvitation.id
-      },
-      data: {
-        status: 'OPENED',
-        openedAt: new Date()
-      }
-    })
+    let updatedInvitation
+    try {
+      updatedInvitation = await prisma.invitation.update({
+        where: {
+          id: surveyInvitation.id
+        },
+        data: {
+          status: 'OPENED',
+          openedAt: new Date()
+        }
+      })
+    } catch (dbError) {
+      console.error('Database error when updating invitation status:', dbError)
+      return NextResponse.json(
+        { error: 'Database error when updating invitation status' },
+        { 
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      )
+    }
 
     console.log('Invitation status updated:', updatedInvitation.status)
 
@@ -125,7 +198,12 @@ export async function GET(
     
     return NextResponse.json(
       { error: `Failed to process survey completion: ${errorMessage}` },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
     )
   }
 } 
