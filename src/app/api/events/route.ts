@@ -3,6 +3,9 @@ import { prisma } from '@/lib/db'
 
 export async function GET() {
   try {
+    // Test database connection first
+    await prisma.$connect()
+    
     const events = await prisma.event.findMany({
       orderBy: { date: 'desc' }
     })
