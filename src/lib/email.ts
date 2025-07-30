@@ -37,31 +37,53 @@ export async function sendEmail(data: EmailData) {
     console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY)
     console.log('FROM_EMAIL:', process.env.FROM_EMAIL)
     
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('RESEND_API_KEY environment variable is not set')
+    }
+
+    if (!data.to) {
+      throw new Error('Recipient email address is required')
+    }
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
         'Content-Type': 'application/json',
       },
-              body: JSON.stringify({
-          from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
-          to: [data.to],
-          subject: data.subject,
-          html: data.html,
-        }),
+      body: JSON.stringify({
+        from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+        to: [data.to],
+        subject: data.subject,
+        html: data.html,
+      }),
     })
 
+    console.log('Resend API response status:', response.status)
+    console.log('Resend API response headers:', Object.fromEntries(response.headers.entries()))
+
     if (!response.ok) {
-      const error = await response.text()
-      console.error('Resend API error response:', error)
-      throw new Error(error)
+      const errorText = await response.text()
+      console.error('Resend API error response:', errorText)
+      console.error('Resend API response status:', response.status)
+      throw new Error(`Resend API error (${response.status}): ${errorText}`)
     }
 
+    const responseData = await response.json()
+    console.log('Resend API success response:', responseData)
+
     console.log('Email sent successfully')
-    return { success: true }
+    return { success: true, data: responseData }
   } catch (error) {
     console.error('Failed to send email:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('Email error stack:', errorStack)
+    return { 
+      success: false, 
+      error: errorMessage,
+      errorDetails: errorStack ? errorStack.split('\n').slice(0, 3).join('\n') : undefined
+    }
   }
 }
 
@@ -85,151 +107,179 @@ export async function sendSaveTheDate(guestId: string, eventId?: string) {
 
     console.log('Guest query result:', guests)
 
-    if (guests.length === 0) throw new Error('Guest not found')
+    if (guests.length === 0) {
+      throw new Error(`Guest not found with ID: ${guestId}`)
+    }
     const guest = guests[0]
 
-  // Get event data using raw SQL
-  let eventGuests: Array<{
-    eventId: string;
-    eventName: string;
-    eventDescription: string | null;
-    eventDate: string;
-    eventLocation: string | null;
-    eventMaxGuests: number | null;
-  }> = []
+    console.log('Found guest:', { id: guest.id, name: `${guest.firstName} ${guest.lastName}`, email: guest.email })
 
-  if (eventId) {
-    eventGuests = await prisma.$queryRaw`
-      SELECT 
-        e.id as eventId,
-        e.name as eventName,
-        e.description as eventDescription,
-        e.date as eventDate,
-        e.location as eventLocation,
-        e."maxGuests" as eventMaxGuests
-      FROM event_guests eg
-      JOIN events e ON eg."eventId" = e.id
-      WHERE eg."guestId" = ${guestId}
-      AND e.id = ${eventId}
-      ORDER BY e.date ASC
-      LIMIT 1
-    `
-  } else {
-    eventGuests = await prisma.$queryRaw`
-      SELECT 
-        e.id as eventId,
-        e.name as eventName,
-        e.description as eventDescription,
-        e.date as eventDate,
-        e.location as eventLocation,
-        e."maxGuests" as eventMaxGuests
-      FROM event_guests eg
-      JOIN events e ON eg."eventId" = e.id
-      WHERE eg."guestId" = ${guestId}
-      ORDER BY e.date ASC
-      LIMIT 1
-    `
-  }
+    // Get event data using raw SQL
+    let eventGuests: Array<{
+      eventId: string;
+      eventName: string;
+      eventDescription: string | null;
+      eventDate: string;
+      eventLocation: string | null;
+      eventMaxGuests: number | null;
+    }> = []
 
-  if (eventGuests.length === 0) throw new Error('Guest not found in any event')
-  const eventData = eventGuests[0]
+    if (eventId) {
+      eventGuests = await prisma.$queryRaw`
+        SELECT 
+          e.id as eventId,
+          e.name as eventName,
+          e.description as eventDescription,
+          e.date as eventDate,
+          e.location as eventLocation,
+          e."maxGuests" as eventMaxGuests
+        FROM event_guests eg
+        JOIN events e ON eg."eventId" = e.id
+        WHERE eg."guestId" = ${guestId}
+        AND e.id = ${eventId}
+        ORDER BY e.date ASC
+        LIMIT 1
+      `
+    } else {
+      eventGuests = await prisma.$queryRaw`
+        SELECT 
+          e.id as eventId,
+          e.name as eventName,
+          e.description as eventDescription,
+          e.date as eventDate,
+          e.location as eventLocation,
+          e."maxGuests" as eventMaxGuests
+        FROM event_guests eg
+        JOIN events e ON eg."eventId" = e.id
+        WHERE eg."guestId" = ${guestId}
+        ORDER BY e.date ASC
+        LIMIT 1
+      `
+    }
 
-  const event = {
-    id: eventData.eventId,
-    name: eventData.eventName,
-    description: eventData.eventDescription,
-    date: new Date(eventData.eventDate),
-    location: eventData.eventLocation,
-    maxGuests: eventData.eventMaxGuests
-  }
-  const eventDate = new Date(event.date)
+    console.log('Event query result:', eventGuests)
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Save the Date</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
-      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 2px;">SAVE THE DATE</h1>
-          <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">You're invited to a special event</p>
-        </div>
+    if (eventGuests.length === 0) {
+      throw new Error(`Guest ${guestId} is not associated with any event${eventId ? ` or event ${eventId} not found` : ''}`)
+    }
+    const eventData = eventGuests[0]
 
-        <!-- Content -->
-        <div style="padding: 40px 30px;">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <h2 style="color: #2d3748; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">${event.name}</h2>
-            <div style="width: 60px; height: 3px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto;"></div>
+    console.log('Found event:', { id: eventData.eventId, name: eventData.eventName, date: eventData.eventDate })
+
+    const event = {
+      id: eventData.eventId,
+      name: eventData.eventName,
+      description: eventData.eventDescription,
+      date: new Date(eventData.eventDate),
+      location: eventData.eventLocation,
+      maxGuests: eventData.eventMaxGuests
+    }
+    const eventDate = new Date(event.date)
+
+    console.log('Processed event data:', { 
+      id: event.id, 
+      name: event.name, 
+      date: eventDate.toISOString(),
+      location: event.location 
+    })
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Save the Date</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 2px;">SAVE THE DATE</h1>
+            <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">You're invited to a special event</p>
           </div>
 
-          <div style="background-color: #f7fafc; border-radius: 12px; padding: 30px; margin: 30px 0; text-align: center;">
-            <div style="font-size: 48px; color: #667eea; margin-bottom: 10px;">📅</div>
-            <h3 style="color: #2d3748; margin: 0 0 15px 0; font-size: 24px; font-weight: 600;">
-              ${eventDate.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </h3>
-            ${event.location ? `
-              <p style="color: #4a5568; margin: 0; font-size: 18px;">
-                📍 ${event.location}
+          <!-- Content -->
+          <div style="padding: 40px 30px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h2 style="color: #2d3748; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">${event.name}</h2>
+              <div style="width: 60px; height: 3px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto;"></div>
+            </div>
+
+            <div style="background-color: #f7fafc; border-radius: 12px; padding: 30px; margin: 30px 0; text-align: center;">
+              <div style="font-size: 48px; color: #667eea; margin-bottom: 10px;">📅</div>
+              <h3 style="color: #2d3748; margin: 0 0 15px 0; font-size: 24px; font-weight: 600;">
+                ${eventDate.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </h3>
+              ${event.location ? `
+                <p style="color: #4a5568; margin: 0; font-size: 18px;">
+                  📍 ${event.location}
+                </p>
+              ` : ''}
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Dear <strong>${guest.firstName} ${guest.lastName}</strong>,
               </p>
-            ` : ''}
+              <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                We are excited to invite you to this special event. Please save this date in your calendar.
+              </p>
+              <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0;">
+                A formal invitation with more details will follow soon.
+              </p>
+            </div>
+
+            <div style="text-align: center; margin: 40px 0;">
+              <div style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 30px; border-radius: 25px; color: #ffffff; font-weight: 600; font-size: 16px;">
+                We look forward to seeing you!
+              </div>
+            </div>
           </div>
 
-          <div style="text-align: center; margin: 30px 0;">
-            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-              Dear <strong>${guest.firstName} ${guest.lastName}</strong>,
+          <!-- Footer -->
+          <div style="background-color: #2d3748; padding: 30px; text-align: center;">
+            <p style="color: #a0aec0; margin: 0; font-size: 14px;">
+              Best regards,<br>
+              <strong style="color: #ffffff;">Event Team</strong>
             </p>
-            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-              We are excited to invite you to this special event. Please save this date in your calendar.
-            </p>
-            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0;">
-              A formal invitation with more details will follow soon.
-            </p>
-          </div>
-
-          <div style="text-align: center; margin: 40px 0;">
-            <div style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 30px; border-radius: 25px; color: #ffffff; font-weight: 600; font-size: 16px;">
-              We look forward to seeing you!
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #4a5568;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">
+                This is an automated message. Please do not reply to this email.
+              </p>
             </div>
           </div>
         </div>
+      </body>
+      </html>
+    `
 
-        <!-- Footer -->
-        <div style="background-color: #2d3748; padding: 30px; text-align: center;">
-          <p style="color: #a0aec0; margin: 0; font-size: 14px;">
-            Best regards,<br>
-            <strong style="color: #ffffff;">Event Team</strong>
-          </p>
-          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #4a5568;">
-            <p style="color: #a0aec0; margin: 0; font-size: 12px;">
-              This is an automated message. Please do not reply to this email.
-            </p>
-          </div>
-        </div>
-      </div>
-    </body>
-    </html>
-  `
+    console.log('About to send email to:', guest.email, 'for event:', event.name)
+    
+    const emailResult = await sendEmail({
+      to: guest.email,
+      subject: `Save the Date: ${event.name}`,
+      html
+    })
 
-  console.log('About to send email to:', guest.email, 'for event:', event.name)
-  
-  return sendEmail({
-    to: guest.email,
-    subject: `Save the Date: ${event.name}`,
-    html
-  })
+    console.log('Email send result:', emailResult)
+    
+    return emailResult
   } catch (error) {
     console.error('Error in sendSaveTheDate:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('sendSaveTheDate error stack:', errorStack)
+    return { 
+      success: false, 
+      error: errorMessage,
+      errorDetails: errorStack ? errorStack.split('\n').slice(0, 3).join('\n') : undefined
+    }
   }
 }
 
@@ -482,7 +532,7 @@ export async function sendRegularPlusOneInvitation(guestId: string, eventId?: st
   // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
   const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
   const responseUrl = `${baseUrl}/respond/${guestId}?eventId=${event.id}`
-
+  
   const html = `
     <!DOCTYPE html>
     <html>

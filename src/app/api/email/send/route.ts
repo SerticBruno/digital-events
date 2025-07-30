@@ -7,6 +7,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { type, guestIds, eventId, plusOneEmails, plusOneNames, to, subject, html } = body
 
+    console.log('Email send request received:', { type, guestIds, eventId, plusOneEmails: !!plusOneEmails, plusOneNames: !!plusOneNames })
+
     // Handle test emails (direct email sending)
     if (to && subject && html) {
       try {
@@ -71,9 +73,67 @@ export async function POST(request: NextRequest) {
       const guestId = guestIds[i]
       
       try {
+        console.log(`Processing guest ${i + 1}/${guestIds.length}: ${guestId}`)
+        
         // Add delay between requests (500ms = 2 requests per second)
         if (i > 0) {
           await delay(500)
+        }
+
+        // Validate guest exists before attempting to send email
+        const guest = await prisma.guest.findUnique({
+          where: { id: guestId },
+          select: { id: true, email: true, firstName: true, lastName: true }
+        })
+
+        if (!guest) {
+          console.error(`Guest not found: ${guestId}`)
+          results.push({ 
+            guestId, 
+            success: false, 
+            error: `Guest not found: ${guestId}` 
+          })
+          continue
+        }
+
+        console.log(`Found guest: ${guest.firstName} ${guest.lastName} (${guest.email})`)
+
+        // Validate event exists
+        const event = await prisma.event.findUnique({
+          where: { id: eventId },
+          select: { id: true, name: true }
+        })
+
+        if (!event) {
+          console.error(`Event not found: ${eventId}`)
+          results.push({ 
+            guestId, 
+            success: false, 
+            error: `Event not found: ${eventId}` 
+          })
+          continue
+        }
+
+        console.log(`Found event: ${event.name}`)
+
+        // Validate guest is associated with event
+        const eventGuest = await prisma.eventGuest.findUnique({
+          where: {
+            eventId_guestId: {
+              eventId: eventId,
+              guestId: guestId
+            }
+          }
+        })
+
+        if (!eventGuest) {
+          console.error(`Guest ${guestId} is not associated with event ${eventId}`)
+          results.push({ 
+            guestId, 
+            success: false, 
+            error: `Guest is not associated with this event` 
+          })
+          continue
         }
 
         let result
@@ -109,6 +169,8 @@ export async function POST(request: NextRequest) {
           default:
             throw new Error(`Unknown email type: ${type}`)
         }
+
+        console.log(`Email send result for ${guestId}:`, result)
 
         if (result.success) {
           // Handle invitation status updates based on email type
@@ -194,12 +256,21 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error(`Failed to send email to guest ${guestId}:`, error)
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-        results.push({ guestId, success: false, error: errorMessage })
+        const errorStack = error instanceof Error ? error.stack : undefined
+        console.error(`Error stack for guest ${guestId}:`, errorStack)
+        results.push({ 
+          guestId, 
+          success: false, 
+          error: errorMessage,
+          errorDetails: errorStack ? errorStack.split('\n').slice(0, 3).join('\n') : undefined
+        })
       }
     }
 
     const successCount = results.filter(r => r.success).length
     const failureCount = results.length - successCount
+
+    console.log(`Email sending completed. Success: ${successCount}, Failed: ${failureCount}`)
 
     return NextResponse.json({
       message: `Sent ${successCount} emails successfully, ${failureCount} failed`,
@@ -208,8 +279,13 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Failed to send emails:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('Error stack:', errorStack)
     return NextResponse.json(
-      { error: `Failed to send emails: ${errorMessage}` },
+      { 
+        error: `Failed to send emails: ${errorMessage}`,
+        errorDetails: errorStack ? errorStack.split('\n').slice(0, 3).join('\n') : undefined
+      },
       { status: 500 }
     )
   }
