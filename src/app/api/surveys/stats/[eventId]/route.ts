@@ -6,9 +6,14 @@ export async function GET(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    console.log('Survey stats API called')
+    
     const { eventId } = await params
 
+    console.log('Survey stats request for event:', eventId)
+
     if (!eventId) {
+      console.error('Missing event ID')
       return NextResponse.json(
         { error: 'Event ID is required' },
         { status: 400 }
@@ -16,6 +21,7 @@ export async function GET(
     }
 
     // Get survey statistics for the event
+    console.log('Fetching survey statistics...')
     const stats = await prisma.$queryRaw<Array<{
       totalInvitations: number
       sentInvitations: number
@@ -37,7 +43,10 @@ export async function GET(
       AND i.type = 'SURVEY'
     `
 
+    console.log('Survey stats fetched:', stats[0])
+
     // Get detailed survey responses
+    console.log('Fetching detailed survey responses...')
     const responses = await prisma.$queryRaw<Array<{
       guestId: string
       firstName: string
@@ -65,6 +74,8 @@ export async function GET(
       ORDER BY g."lastName", g."firstName"
     `
 
+    console.log('Survey responses fetched:', responses.length, 'responses')
+
     const result = stats[0] || {
       totalInvitations: 0,
       sentInvitations: 0,
@@ -74,17 +85,26 @@ export async function GET(
       totalResponses: 0
     }
 
-    return NextResponse.json({
+    const responseData = {
       stats: {
         ...result,
         averageRating: result.averageRating ? Math.round(result.averageRating * 10) / 10 : null
       },
       responses
-    })
+    }
+    
+    console.log('Returning survey stats:', responseData)
+
+    return NextResponse.json(responseData)
   } catch (error) {
     console.error('Error fetching survey stats:', error)
+    
+    // Provide more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    console.error('Detailed error:', errorMessage)
+    
     return NextResponse.json(
-      { error: 'Failed to fetch survey statistics' },
+      { error: `Failed to fetch survey statistics: ${errorMessage}` },
       { status: 500 }
     )
   }

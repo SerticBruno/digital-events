@@ -78,11 +78,36 @@ export default function RespondPage() {
         ? `/api/guests/${guestId}?eventId=${eventId}`
         : `/api/guests/${guestId}`
       
+      console.log('Fetching guest data from:', url)
+      
       const response = await fetch(url)
+      console.log('Response status:', response.status)
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+      
       if (!response.ok) {
-        throw new Error('Guest not found')
+        const errorText = await response.text()
+        console.error('Response not ok. Status:', response.status, 'Body:', errorText)
+        throw new Error(`Guest not found (${response.status}): ${errorText}`)
       }
-      const data = await response.json()
+      
+      const responseText = await response.text()
+      console.log('Response body:', responseText)
+      
+      if (!responseText.trim()) {
+        throw new Error('Empty response from server')
+      }
+      
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError)
+        console.error('Response text that failed to parse:', responseText)
+        throw new Error('Invalid JSON response from server')
+      }
+      
+      console.log('Parsed data:', data)
+      
       setGuest(data.guest)
       setEvent(data.event)
       
@@ -95,7 +120,7 @@ export default function RespondPage() {
       setDataLoaded(true)
     } catch (error) {
       console.error('Failed to fetch guest data:', error)
-      setError('Guest not found or invitation has expired')
+      setError(error instanceof Error ? error.message : 'Guest not found or invitation has expired')
     } finally {
       setLoading(false)
     }
@@ -113,19 +138,48 @@ export default function RespondPage() {
         plusOneEmail: responseType === 'coming_with_plus_one' ? plusOneEmail : undefined
       }
 
+      console.log('Submitting response:', responseData)
+
       const response = await fetch('/api/guests/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(responseData)
       })
 
+      console.log('Response status:', response.status)
+
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error('Response API error:', errorData)
-        throw new Error('Failed to submit response')
+        const errorText = await response.text()
+        console.error('Response API error. Status:', response.status, 'Body:', errorText)
+        
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError)
+          throw new Error(`Server error (${response.status}): ${errorText}`)
+        }
+        
+        throw new Error(errorData.error || 'Failed to submit response')
       }
 
-      await response.json()
+      const responseText = await response.text()
+      console.log('Response body:', responseText)
+      
+      if (!responseText.trim()) {
+        throw new Error('Empty response from server')
+      }
+      
+      let result
+      try {
+        result = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error('JSON parse error in response:', parseError)
+        console.error('Response text that failed to parse:', responseText)
+        throw new Error('Invalid JSON response from server')
+      }
+      
+      console.log('Parsed response result:', result)
       
       // Redirect to thank you page with response details
       const params = new URLSearchParams({
@@ -146,7 +200,7 @@ export default function RespondPage() {
       window.location.href = `/respond/thank-you?${params.toString()}`
     } catch (error) {
       console.error('Failed to submit response:', error)
-      setError('Failed to submit your response. Please try again.')
+      setError(error instanceof Error ? error.message : 'Failed to submit your response. Please try again.')
     } finally {
       setSubmitting(false)
     }

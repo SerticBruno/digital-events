@@ -163,6 +163,7 @@ export async function POST(request: NextRequest) {
             console.log(`Successfully updated QR code status to SENT for guest ${guest.id}`)
           } else {
             console.warn(`Failed to update QR code status for guest ${guest.id}:`, statusUpdateResult.error)
+            // Continue with email sending even if status update fails
           }
 
           // Send email with QR code
@@ -186,11 +187,12 @@ export async function POST(request: NextRequest) {
               emailsSent: 1
             })
           } else {
+            console.error(`Failed to send QR code email to ${guest.email}:`, emailResult.error)
             results.push({
               guestId: guest.id,
               guestName: `${guest.firstName} ${guest.lastName}`,
               status: 'failed',
-              reason: 'Failed to send email'
+              reason: `Failed to send email: ${emailResult.error}`
             })
           }
         } else if (guest.response === 'COMING_WITH_PLUS_ONE') {

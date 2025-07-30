@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Plus, Upload, Search, User, Mail, Building, Crown, X, Trash2 } from 'lucide-react'
+import { Users, Plus, Upload, Search, User, Mail, Building, Crown, X, Trash2, UserMinus } from 'lucide-react'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
 import DataTable, { columnRenderers } from '@/components/DataTable'
@@ -100,15 +100,25 @@ export default function GuestsPage() {
     {
       key: 'actions',
       label: 'Actions',
-      width: 'w-32',
+      width: 'w-48',
       render: (value: unknown, row: Guest) => (
-        <button
-          onClick={() => deleteGuest(row.id, `${row.firstName} ${row.lastName}`)}
-          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-          title="Delete"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={() => removeGuestFromEvents(row.id, `${row.firstName} ${row.lastName}`)}
+            className="p-1 text-gray-400 hover:text-orange-600 transition-colors"
+            title="Remove from all events"
+            disabled={!row.eventGuests || row.eventGuests.length === 0}
+          >
+            <UserMinus className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => deleteGuest(row.id, `${row.firstName} ${row.lastName}`)}
+            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+            title="Delete from database"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       )
     }
   ]
@@ -227,6 +237,44 @@ export default function GuestsPage() {
     } catch (error) {
       console.error('Failed to bulk upload guests:', error)
       alert(error instanceof Error ? error.message : 'Failed to bulk upload guests')
+    }
+  }
+
+  const removeGuestFromEvents = async (guestId: string, guestName: string) => {
+    if (!confirm(`Are you sure you want to remove ${guestName} from all events? This will keep them in the database but remove them from all event guest lists.`)) {
+      return
+    }
+
+    try {
+      // Get all events this guest is associated with
+      const guest = guests.find(g => g.id === guestId)
+      if (!guest || !guest.eventGuests || guest.eventGuests.length === 0) {
+        alert('This guest is not associated with any events.')
+        return
+      }
+
+      // Remove from each event
+      const removePromises = guest.eventGuests.map(async (eventGuest) => {
+        const response = await fetch(`/api/guests?guestId=${guestId}&eventId=${eventGuest.event.id}`, {
+          method: 'DELETE'
+        })
+        return { response, eventName: eventGuest.event.name }
+      })
+
+      const results = await Promise.all(removePromises)
+      const successResults = results.filter(r => r.response.ok)
+      const failureCount = results.length - successResults.length
+
+      let message = `Successfully removed ${guestName} from ${successResults.length} event(s)`
+      if (failureCount > 0) {
+        message += `, ${failureCount} failed`
+      }
+
+      alert(message)
+      await fetchGuests()
+    } catch (error) {
+      console.error('Failed to remove guest from events:', error)
+      alert(`Failed to remove guest from events: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

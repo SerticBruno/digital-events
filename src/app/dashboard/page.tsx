@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User, Edit, Trash2, Calendar, MapPin, Eye } from 'lucide-react'
+import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User, Edit, Trash2, Calendar, MapPin, Eye, UserMinus } from 'lucide-react'
 import EventForm from '@/components/EventForm'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
@@ -192,7 +192,7 @@ export default function Dashboard() {
     {
       key: 'actions',
       label: 'Actions',
-      width: 'w-48',
+      width: 'w-64',
       render: (value: unknown, row: Guest) => (
         <div className="flex items-center space-x-2">
           <a
@@ -215,9 +215,16 @@ export default function Dashboard() {
             <Edit className="w-4 h-4" />
           </button>
           <button 
-            onClick={() => deleteGuest(row.id)}
+            onClick={() => removeGuestFromEvent(row.id)}
+            className="p-1 text-gray-400 hover:text-orange-600 transition-colors"
+            title="Remove from event"
+          >
+            <UserMinus className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => deleteGuestFromDatabase(row.id)}
             className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-            title="Remove"
+            title="Delete from database"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -445,6 +452,46 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Failed to send test email:', error)
       alert('Failed to send test email')
+    }
+  }
+
+  const testQRSending = async () => {
+    if (!selectedEvent) {
+      alert('Please select an event first')
+      return
+    }
+
+    if (guests.length === 0) {
+      alert('No guests found for this event')
+      return
+    }
+
+    const firstGuest = guests[0]
+    const guestName = `${firstGuest.firstName} ${firstGuest.lastName}`
+    
+    if (!confirm(`Test QR code sending to ${guestName} (${firstGuest.email})?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/qr/test-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          guestId: firstGuest.id, 
+          eventId: selectedEvent.id 
+        })
+      })
+      const result = await response.json()
+      
+      if (response.ok && result.success) {
+        alert(`QR code test successful!\n\nQR Code: ${result.qrCode}\nEmail sent: ${result.emailSent}`)
+      } else {
+        alert(`QR code test failed: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to test QR code sending:', error)
+      alert('Failed to test QR code sending')
     }
   }
 
@@ -718,7 +765,7 @@ export default function Dashboard() {
     }
   }
 
-  const deleteGuest = async (guestId: string) => {
+  const removeGuestFromEvent = async (guestId: string) => {
     if (!selectedEvent) return
 
     if (!confirm('Are you sure you want to remove this guest from the event?')) {
@@ -738,6 +785,42 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Failed to remove guest from event:', error)
       alert('Failed to remove guest from event')
+    }
+  }
+
+  const deleteGuestFromDatabase = async (guestId: string) => {
+    const guest = guests.find(g => g.id === guestId)
+    if (!guest) return
+
+    const guestName = `${guest.firstName} ${guest.lastName}`
+    
+    if (!confirm(`Are you sure you want to permanently delete ${guestName}? This action cannot be undone and will remove them from all events.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/guests/global?guestId=${guestId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        let message = `Guest ${guestName} has been permanently deleted.`
+        
+        if (result.deletedPlusOnes && result.deletedPlusOnes.length > 0) {
+          const plusOneNames = result.deletedPlusOnes.map((po: { firstName: string; lastName: string; email: string }) => `${po.firstName} ${po.lastName} (${po.email})`).join(', ')
+          message += `\n\nAlso deleted ${result.deletedPlusOnes.length} plus-one guest(s): ${plusOneNames}`
+        }
+        
+        alert(message)
+        await fetchGuests(selectedEvent!.id)
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete guest')
+      }
+    } catch (error) {
+      console.error('Failed to delete guest:', error)
+      alert(`Failed to delete guest: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -1352,6 +1435,13 @@ export default function Dashboard() {
                     >
                       <Mail className="w-4 h-4" />
                       Test Email
+                    </button>
+                    <button
+                      onClick={testQRSending}
+                      className={`${getButtonClasses('outline')} w-full`}
+                    >
+                      <QrCode className="w-4 h-4" />
+                      Test QR Code
                     </button>
                   </div>
                 </div>

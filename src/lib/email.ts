@@ -1041,7 +1041,11 @@ export async function sendQRCode(guestId: string, eventId?: string) {
   if (qrCodes.length === 0) {
     // Generate a new QR code if none exists
     const { generateQRCode } = await import('@/lib/qr')
-    await generateQRCode(guestId, eventId || event.id, 'REGULAR')
+    const qrResult = await generateQRCode(guestId, eventId || event.id, guest.isVip ? 'VIP' : 'REGULAR')
+    
+    if (!qrResult.success) {
+      throw new Error(qrResult.error || 'Failed to generate QR code')
+    }
     
     // Fetch the newly created QR code
     if (eventId) {
@@ -1113,21 +1117,11 @@ export async function sendQRCode(guestId: string, eventId?: string) {
           </div>
 
           <!-- QR Code Section -->
-          <div style="background-color:#f9f9f9;border:1px solid #ddd;padding:15px;margin:20px 0;border-radius:4px">
-            <p style="margin:0;color:#666;font-size:14px">
-              <strong>Quick Response:</strong> Scan this QR code with your phone to quickly respond to this invitation.
-            </p>
-            <div style="text-align:center;margin-top:15px">
-              <img src="${qrCodeImageUrl}" alt="Response QR Code" style="border:2px solid #ddd;border-radius:8px;padding:10px;background:white" />
-              <p style="margin-top:10px;font-family:monospace;font-size:12px;color:#666">Scan to respond to invitation</p>
-            </div>
-            <div style="margin-top:15px;padding-top:15px;border-top:1px solid #ddd;text-align:center">
-              <p style="margin:0;color:#666;font-size:12px">
-                <strong>Manual Entry:</strong> If scanning doesn't work, you can manually enter this code:
-              </p>
-              <p style="margin:5px 0 0 0;font-family:monospace;font-size:14px;color:#333;background:#fff;padding:8px;border:1px solid #ccc;border-radius:4px;display:inline-block">
-                ${qrCodeText}
-              </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <h3 style="color: #2d3748; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">Your Entry Pass</h3>
+            <div style="background: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 30px; display: inline-block; margin: 20px 0;">
+              <img src="${qrCodeImageUrl}" alt="QR Code" style="width: 200px; height: 200px; display: block; margin: 0 auto;">
+              <p style="color: #718096; font-size: 12px; margin: 10px 0 0 0; font-family: monospace;">${qrCodeText}</p>
             </div>
           </div>
 

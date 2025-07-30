@@ -3,12 +3,36 @@ import { prisma } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-      const body = await request.json()
-  const { guestId, eventId, response, plusOneEmail } = body
+    console.log('Respond API called')
+    
+    const bodyText = await request.text()
+    console.log('Request body text:', bodyText)
+    
+    if (!bodyText.trim()) {
+      console.error('Empty request body')
+      return NextResponse.json(
+        { error: 'Request body is required' },
+        { status: 400 }
+      )
+    }
+    
+    let body
+    try {
+      body = JSON.parse(bodyText)
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError)
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+    
+    const { guestId, eventId, response, plusOneEmail } = body
 
     console.log('Respond API called with:', { guestId, eventId, response, plusOneEmail })
     
     if (!guestId || !eventId || !response) {
+      console.error('Missing required fields:', { guestId, eventId, response })
       return NextResponse.json(
         { error: 'Guest ID, event ID, and response are required' },
         { status: 400 }
@@ -181,15 +205,23 @@ export async function POST(request: NextRequest) {
       message += '. Plus-one guest has been removed.'
     }
     
-    return NextResponse.json({
+    const responseData = {
       message,
       invitation,
       deletedPlusOne: deletedPlusOneEmail
-    })
+    }
+    
+    console.log('Returning response:', responseData)
+    
+    return NextResponse.json(responseData)
   } catch (error) {
     console.error('Failed to record response:', error)
+    
+    // Ensure we return a proper JSON response even on error
+    const errorMessage = error instanceof Error ? error.message : 'Failed to record response'
+    
     return NextResponse.json(
-      { error: 'Failed to record response' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

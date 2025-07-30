@@ -4,10 +4,36 @@ import { sendSurvey } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    console.log('Survey send API called')
+    
+    const bodyText = await request.text()
+    console.log('Request body text:', bodyText)
+    
+    if (!bodyText.trim()) {
+      console.error('Empty request body')
+      return NextResponse.json(
+        { error: 'Request body is required' },
+        { status: 400 }
+      )
+    }
+    
+    let body
+    try {
+      body = JSON.parse(bodyText)
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError)
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+    
     const { eventId } = body
 
+    console.log('Survey send request for event:', eventId)
+
     if (!eventId) {
+      console.error('Missing event ID')
       return NextResponse.json(
         { error: 'Event ID is required' },
         { status: 400 }
@@ -135,16 +161,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const responseData = {
       message: `Sent surveys to ${totalSurveysSent} guests, ${totalFailures} failed`,
       totalSent: totalSurveysSent,
       totalFailed: totalFailures,
       results
-    })
+    }
+    
+    console.log('Survey send completed:', responseData)
+    
+    return NextResponse.json(responseData)
   } catch (error) {
     console.error('Failed to send surveys:', error)
+    
+    // Provide more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    console.error('Detailed error:', errorMessage)
+    
     return NextResponse.json(
-      { error: 'Failed to send surveys' },
+      { error: `Failed to send surveys: ${errorMessage}` },
       { status: 500 }
     )
   }

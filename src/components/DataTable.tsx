@@ -201,7 +201,7 @@ export default function DataTable<T extends Record<string, unknown> = Record<str
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 tracking-wider ${
                     column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
                   } ${column.width ? column.width : ''} ${column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : ''}`}
                   onClick={() => column.sortable && handleSort(column.key)}
@@ -427,7 +427,7 @@ export const columnRenderers = {
       } else if (surveyInvitation.status === 'OPENED') {
         config = { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Opened' }
       } else if (surveyInvitation.status === 'RESPONDED') {
-        config = { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Responded' }
+        config = { bg: 'bg-green-100', text: 'text-green-800', label: 'Responded' }
       } else {
         config = { bg: 'bg-yellow-100', text: 'text-yellow-800', label: surveyInvitation.status }
       }
