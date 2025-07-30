@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     let deletedPlusOneEmail = null
+    let plusOneCreationError = null
 
     // Validate response values
     const validResponses = ['COMING', 'NOT_COMING', 'COMING_WITH_PLUS_ONE']
@@ -102,11 +103,16 @@ export async function POST(request: NextRequest) {
           }
           
           // Set canHavePlusOne back to false since they're no longer bringing a plus-one
-          await prisma.$executeRaw`
-            UPDATE guests 
-            SET "canHavePlusOne" = false 
-            WHERE id = ${guestId}
-          `
+          try {
+            await prisma.$executeRaw`
+              UPDATE guests 
+              SET "canHavePlusOne" = false 
+              WHERE id = ${guestId}
+            `
+          } catch (updateError) {
+            console.error('Failed to update guest canHavePlusOne status:', updateError)
+            // Continue with the response update even if this update fails
+          }
         } catch (error) {
           console.error('Failed to delete plus-one guest:', error)
           // Continue with the response update even if plus-one deletion fails
@@ -149,11 +155,16 @@ export async function POST(request: NextRequest) {
         const originalGuest = await prisma.guest.findUnique({ where: { id: guestId } })
         
         // Update the original guest's canHavePlusOne status to true since they confirmed they're bringing a plus-one
-        await prisma.$executeRaw`
-          UPDATE guests 
-          SET "canHavePlusOne" = true 
-          WHERE id = ${guestId}
-        `
+        try {
+          await prisma.$executeRaw`
+            UPDATE guests 
+            SET "canHavePlusOne" = true 
+            WHERE id = ${guestId}
+          `
+        } catch (updateError) {
+          console.error('Failed to update guest canHavePlusOne status:', updateError)
+          // Continue with plus-one creation even if this update fails
+        }
         
         // Create new guest for plus-one
         const plusOneGuest = await prisma.guest.upsert({
@@ -186,11 +197,14 @@ export async function POST(request: NextRequest) {
           }
         })
 
+        console.log('Plus-one guest created successfully:', plusOneGuest)
+
         // Note: Plus-one guests do not receive invitations - they accompany the main guest
         // QR codes will be generated separately when the "Generate QR Codes" button is clicked
 
       } catch (error) {
         console.error('Failed to create plus-one guest:', error)
+        plusOneCreationError = error instanceof Error ? error.message : 'Failed to create plus-one guest'
         // Continue with the original guest's response even if plus-one creation fails
       }
     }
@@ -205,15 +219,31 @@ export async function POST(request: NextRequest) {
       message += '. Plus-one guest has been removed.'
     }
     
+    // If plus-one creation failed, include that information
+    if (plusOneCreationError) {
+      message += '. Note: There was an issue creating your plus-one guest, but your response was recorded.'
+    }
+    
     const responseData = {
       message,
       invitation,
-      deletedPlusOne: deletedPlusOneEmail
+      deletedPlusOne: deletedPlusOneEmail,
+      plusOneCreationError: plusOneCreationError || null
     }
     
     console.log('Returning response:', responseData)
+    console.log('Response JSON string:', JSON.stringify(responseData))
     
-    return NextResponse.json(responseData)
+    // Ensure we return a proper JSON response
+    const jsonResponse = NextResponse.json(responseData, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    
+    console.log('Response object created successfully')
+    return jsonResponse
   } catch (error) {
     console.error('Failed to record response:', error)
     
@@ -222,7 +252,12 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(
       { error: errorMessage },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
     )
   }
 } 

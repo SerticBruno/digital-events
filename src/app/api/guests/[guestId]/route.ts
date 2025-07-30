@@ -116,7 +116,12 @@ export async function GET(
     
     console.log('Returning response:', responseData)
 
-    return NextResponse.json(responseData)
+    return NextResponse.json(responseData, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
   } catch (error) {
     console.error('Failed to fetch guest data:', error)
     
@@ -125,7 +130,12 @@ export async function GET(
     
     return NextResponse.json(
       { error: errorMessage },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
     )
   }
 } 

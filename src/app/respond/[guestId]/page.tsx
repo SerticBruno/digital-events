@@ -103,7 +103,10 @@ export default function RespondPage() {
       } catch (parseError) {
         console.error('JSON parse error:', parseError)
         console.error('Response text that failed to parse:', responseText)
-        throw new Error('Invalid JSON response from server')
+        console.error('Response length:', responseText.length)
+        console.error('Response first 100 chars:', responseText.substring(0, 100))
+        console.error('Response last 100 chars:', responseText.substring(responseText.length - 100))
+        throw new Error(`Invalid JSON response from server: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`)
       }
       
       console.log('Parsed data:', data)
@@ -147,6 +150,7 @@ export default function RespondPage() {
       })
 
       console.log('Response status:', response.status)
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
 
       if (!response.ok) {
         const errorText = await response.text()
@@ -165,9 +169,15 @@ export default function RespondPage() {
 
       const responseText = await response.text()
       console.log('Response body:', responseText)
+      console.log('Response body length:', responseText.length)
       
       if (!responseText.trim()) {
         throw new Error('Empty response from server')
+      }
+      
+      // Check if response appears to be truncated
+      if (responseText.length < 10) {
+        throw new Error(`Response appears to be truncated. Length: ${responseText.length}`)
       }
       
       let result
@@ -176,10 +186,19 @@ export default function RespondPage() {
       } catch (parseError) {
         console.error('JSON parse error in response:', parseError)
         console.error('Response text that failed to parse:', responseText)
-        throw new Error('Invalid JSON response from server')
+        console.error('Response length:', responseText.length)
+        console.error('Response first 100 chars:', responseText.substring(0, 100))
+        console.error('Response last 100 chars:', responseText.substring(responseText.length - 100))
+        throw new Error(`Invalid JSON response from server: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`)
       }
       
       console.log('Parsed response result:', result)
+      
+      // Check if there was a plus-one creation error but the main response was successful
+      if (result.plusOneCreationError) {
+        console.warn('Plus-one creation failed but main response succeeded:', result.plusOneCreationError)
+        // We can still proceed since the main response was recorded
+      }
       
       // Redirect to thank you page with response details
       const params = new URLSearchParams({
