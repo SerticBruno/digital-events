@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const email = searchParams.get('email')
     const eventId = searchParams.get('eventId')
 
-    let result: any = {}
+    const result: Record<string, unknown> = {}
 
     // Get all guests
     const allGuests = await prisma.guest.findMany({

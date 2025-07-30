@@ -76,13 +76,23 @@ export async function GET(
 
     console.log('Survey responses fetched:', responses.length, 'responses')
 
-    const result = stats[0] || {
+    const rawResult = stats[0] || {
       totalInvitations: 0,
       sentInvitations: 0,
       openedInvitations: 0,
       completedSurveys: 0,
       averageRating: null,
       totalResponses: 0
+    }
+
+    // Convert BigInt values to regular numbers to avoid serialization issues
+    const result = {
+      totalInvitations: Number(rawResult.totalInvitations),
+      sentInvitations: Number(rawResult.sentInvitations),
+      openedInvitations: Number(rawResult.openedInvitations),
+      completedSurveys: Number(rawResult.completedSurveys),
+      averageRating: rawResult.averageRating ? Number(rawResult.averageRating) : null,
+      totalResponses: Number(rawResult.totalResponses)
     }
 
     const responseData = {
