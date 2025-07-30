@@ -45,49 +45,57 @@ export async function GET(request: NextRequest) {
 
     result.event = event
 
-    // Check if guest is associated with event
+    // Check event_guests relationship
     const eventGuest = await prisma.eventGuest.findUnique({
       where: {
         eventId_guestId: {
-          eventId: eventId,
-          guestId: guestId
+          eventId,
+          guestId
         }
       }
     })
 
     result.eventGuest = eventGuest
 
-    // Check existing invitations
-    const invitations = await prisma.invitation.findMany({
-      where: {
-        guestId: guestId,
-        eventId: eventId
-      },
-      select: {
-        id: true,
-        type: true,
-        status: true,
-        sentAt: true,
-        response: true
+    // Test raw SQL query to see the exact date format
+    try {
+      const rawEventData = await prisma.$queryRaw<Array<{
+        eventId: string;
+        eventName: string;
+        eventDate: string;
+      }>>`
+        SELECT 
+          e.id as eventId,
+          e.name as eventName,
+          e.date as eventDate
+        FROM event_guests eg
+        JOIN events e ON eg."eventId" = e.id
+        WHERE eg."guestId" = ${guestId}
+        AND e.id = ${eventId}
+      `
+
+      result.rawEventData = rawEventData
+
+      // Test date parsing
+      if (rawEventData.length > 0) {
+        const rawDate = rawEventData[0].eventDate
+        result.dateTests = {
+          rawDate,
+          rawDateType: typeof rawDate,
+          newDateResult: new Date(rawDate),
+          newDateValid: !isNaN(new Date(rawDate).getTime()),
+          toISOString: new Date(rawDate).toISOString()
+        }
       }
-    })
-
-    result.invitations = invitations
-
-    // Check environment variables (without exposing sensitive data)
-    result.environment = {
-      RESEND_API_KEY: !!process.env.RESEND_API_KEY,
-      FROM_EMAIL: !!process.env.FROM_EMAIL,
-      NEXTAUTH_URL: !!process.env.NEXTAUTH_URL,
-      TEST_URL: !!process.env.TEST_URL
+    } catch (error) {
+      result.rawQueryError = error instanceof Error ? error.message : 'Unknown error'
     }
 
     return NextResponse.json(result)
   } catch (error) {
     console.error('Debug guest-event error:', error)
     return NextResponse.json({
-      error: 'Debug failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 } 

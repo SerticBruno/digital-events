@@ -7,6 +7,20 @@ export interface EmailData {
   from?: string
 }
 
+// Helper function to safely parse dates from database
+function parseEventDate(dateString: string): Date {
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      throw new Error(`Invalid date format: ${dateString}`)
+    }
+    return date
+  } catch (error) {
+    console.error('Date parsing error:', error)
+    throw new Error(`Failed to parse event date: ${dateString}. Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
 
 
 
@@ -166,15 +180,17 @@ export async function sendSaveTheDate(guestId: string, eventId?: string) {
 
     console.log('Found event:', { id: eventData.eventId, name: eventData.eventName, date: eventData.eventDate })
 
+    // Parse the date safely
+    const eventDate = parseEventDate(eventData.eventDate)
+
     const event = {
       id: eventData.eventId,
       name: eventData.eventName,
       description: eventData.eventDescription,
-      date: new Date(eventData.eventDate),
+      date: eventDate,
       location: eventData.eventLocation,
       maxGuests: eventData.eventMaxGuests
     }
-    const eventDate = new Date(event.date)
 
     console.log('Processed event data:', { 
       id: event.id, 
