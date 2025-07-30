@@ -25,53 +25,53 @@ export async function POST() {
       description TEXT,
       date TIMESTAMP(3) NOT NULL,
       location TEXT,
-      maxGuests INTEGER,
-      createdAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updatedAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      "maxGuests" INTEGER,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`
     
     await prisma.$executeRaw`CREATE TABLE guests (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,
-      firstName TEXT NOT NULL,
-      lastName TEXT NOT NULL,
+      "firstName" TEXT NOT NULL,
+      "lastName" TEXT NOT NULL,
       company TEXT,
       position TEXT,
       phone TEXT,
-      isVip BOOLEAN NOT NULL DEFAULT false,
-      isPlusOne BOOLEAN NOT NULL DEFAULT false,
-      canHavePlusOne BOOLEAN NOT NULL DEFAULT false,
-      createdAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updatedAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      "isVip" BOOLEAN NOT NULL DEFAULT false,
+      "isPlusOne" BOOLEAN NOT NULL DEFAULT false,
+      "canHavePlusOne" BOOLEAN NOT NULL DEFAULT false,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`
     
     await prisma.$executeRaw`CREATE TABLE event_guests (
       id TEXT PRIMARY KEY,
-      eventId TEXT NOT NULL,
-      guestId TEXT NOT NULL,
-      createdAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (eventId) REFERENCES events(id) ON DELETE CASCADE,
-      FOREIGN KEY (guestId) REFERENCES guests(id) ON DELETE CASCADE,
-      UNIQUE(eventId, guestId)
+      "eventId" TEXT NOT NULL,
+      "guestId" TEXT NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY ("eventId") REFERENCES events(id) ON DELETE CASCADE,
+      FOREIGN KEY ("guestId") REFERENCES guests(id) ON DELETE CASCADE,
+      UNIQUE("eventId", "guestId")
     )`
     
     await prisma.$executeRaw`CREATE TABLE invitations (
       id TEXT PRIMARY KEY,
       type TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'PENDING',
-      sentAt TIMESTAMP(3),
-      openedAt TIMESTAMP(3),
-      respondedAt TIMESTAMP(3),
+      "sentAt" TIMESTAMP(3),
+      "openedAt" TIMESTAMP(3),
+      "respondedAt" TIMESTAMP(3),
       response TEXT,
-      hasPlusOne BOOLEAN NOT NULL DEFAULT false,
-      plusOneName TEXT,
-      plusOneEmail TEXT,
-      guestId TEXT NOT NULL,
-      eventId TEXT NOT NULL,
-      createdAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updatedAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (guestId) REFERENCES guests(id) ON DELETE CASCADE,
-      FOREIGN KEY (eventId) REFERENCES events(id) ON DELETE CASCADE
+      "hasPlusOne" BOOLEAN NOT NULL DEFAULT false,
+      "plusOneName" TEXT,
+      "plusOneEmail" TEXT,
+      "guestId" TEXT NOT NULL,
+      "eventId" TEXT NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY ("guestId") REFERENCES guests(id) ON DELETE CASCADE,
+      FOREIGN KEY ("eventId") REFERENCES events(id) ON DELETE CASCADE
     )`
     
     await prisma.$executeRaw`CREATE TABLE qr_codes (
@@ -79,23 +79,23 @@ export async function POST() {
       code TEXT NOT NULL UNIQUE,
       type TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'CREATED',
-      usedAt TIMESTAMP(3),
-      guestId TEXT NOT NULL,
-      eventId TEXT NOT NULL,
-      createdAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (guestId) REFERENCES guests(id) ON DELETE CASCADE,
-      FOREIGN KEY (eventId) REFERENCES events(id) ON DELETE CASCADE
+      "usedAt" TIMESTAMP(3),
+      "guestId" TEXT NOT NULL,
+      "eventId" TEXT NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY ("guestId") REFERENCES guests(id) ON DELETE CASCADE,
+      FOREIGN KEY ("eventId") REFERENCES events(id) ON DELETE CASCADE
     )`
     
     await prisma.$executeRaw`CREATE TABLE surveys (
       id TEXT PRIMARY KEY,
       rating INTEGER NOT NULL,
       feedback TEXT,
-      submittedAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      guestId TEXT NOT NULL UNIQUE,
-      eventId TEXT NOT NULL,
-      FOREIGN KEY (guestId) REFERENCES guests(id) ON DELETE CASCADE,
-      FOREIGN KEY (eventId) REFERENCES events(id) ON DELETE CASCADE
+      "submittedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "guestId" TEXT NOT NULL UNIQUE,
+      "eventId" TEXT NOT NULL,
+      FOREIGN KEY ("guestId") REFERENCES guests(id) ON DELETE CASCADE,
+      FOREIGN KEY ("eventId") REFERENCES events(id) ON DELETE CASCADE
     )`
     
     console.log('Database schema initialized successfully')
