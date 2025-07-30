@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
           // Create new guest using raw SQL
           const guestId = randomUUID()
           await prisma.$executeRaw`
-            INSERT INTO guests (id, email, firstName, lastName, company, position, phone, isVip, isPlusOne, createdAt, updatedAt)
-            VALUES (${guestId}, ${guestData.email}, ${guestData.firstName}, ${guestData.lastName}, ${guestData.company || null}, ${guestData.position || null}, ${guestData.phone || null}, ${guestData.isVip || false}, false, datetime('now'), datetime('now'))
+            INSERT INTO guests (id, email, firstName, lastName, company, position, phone, isVip, isPlusOne, canHavePlusOne, createdAt, updatedAt)
+            VALUES (${guestId}, ${guestData.email}, ${guestData.firstName}, ${guestData.lastName}, ${guestData.company || null}, ${guestData.position || null}, ${guestData.phone || null}, ${guestData.isVip || false}, false, false, datetime('now'), datetime('now'))
           `
           guest = {
             id: guestId,
@@ -65,9 +65,10 @@ export async function POST(request: NextRequest) {
             phone: guestData.phone || null,
             isVip: guestData.isVip || false,
             isPlusOne: false,
+            canHavePlusOne: false,
             createdAt: new Date(),
             updatedAt: new Date()
-          } as unknown as { id: string; email: string; firstName: string; lastName: string; company: string | null; position: string | null; phone: string | null; isVip: boolean; isPlusOne: boolean; createdAt: Date; updatedAt: Date; eventId: string }
+          } as unknown as { id: string; email: string; firstName: string; lastName: string; company: string | null; position: string | null; phone: string | null; isVip: boolean; isPlusOne: boolean; canHavePlusOne: boolean; createdAt: Date; updatedAt: Date; eventId: string }
         }
 
         // Check if guest is already in this event using raw SQL

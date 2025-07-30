@@ -1,19 +1,11 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { CheckCircle, XCircle, UserPlus, Calendar, MapPin, Gift } from 'lucide-react'
 import { componentStyles } from '@/lib/design-system'
 
-interface Event {
-  id: string
-  name: string
-  description?: string
-  date: string
-  location?: string
-}
-
-export default function ThankYouPage() {
+function ThankYouContent() {
   const searchParams = useSearchParams()
   const response = searchParams.get('response')
   const eventName = searchParams.get('eventName')
@@ -62,7 +54,7 @@ export default function ThankYouPage() {
         return {
           icon: UserPlus,
           title: 'Thank you for confirming with a guest!',
-          message: `We've sent an invitation to ${plusOneEmail}. We look forward to seeing both of you!`,
+          message: `We&apos;ve sent an invitation to ${plusOneEmail}. We look forward to seeing both of you!`,
           color: 'text-blue-600',
           bgColor: 'bg-blue-50',
           iconColor: 'text-blue-500'
@@ -71,7 +63,7 @@ export default function ThankYouPage() {
         return {
           icon: XCircle,
           title: 'Thank you for letting us know',
-          message: 'We\'re sorry you can\'t make it, but we appreciate you taking the time to respond.',
+          message: 'We&apos;re sorry you can&apos;t make it, but we appreciate you taking the time to respond.',
           color: 'text-gray-600',
           bgColor: 'bg-gray-50',
           iconColor: 'text-gray-500'
@@ -163,14 +155,14 @@ export default function ThankYouPage() {
         <div className={`${componentStyles.card.base} shadow-lg`}>
           <div className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
-              What's Next?
+              What&apos;s Next?
             </h3>
             
             {response === 'coming' && (
               <div className="space-y-3 text-gray-600">
-                <p>• You'll receive a QR code entry pass closer to the event date</p>
+                <p>• You&apos;ll receive a QR code entry pass closer to the event date</p>
                 <p>• Please arrive 15 minutes before the event starts</p>
-                <p>• Don't forget to bring your QR code with you</p>
+                <p>• Don&apos;t forget to bring your QR code with you</p>
               </div>
             )}
             
@@ -184,7 +176,7 @@ export default function ThankYouPage() {
             
             {response === 'not_coming' && (
               <div className="space-y-3 text-gray-600">
-                <p>• We've noted your response in our records</p>
+                <p>• We&apos;ve noted your response in our records</p>
                 <p>• We hope to see you at future events</p>
                 <p>• Feel free to reach out if your plans change</p>
               </div>
@@ -201,5 +193,24 @@ export default function ThankYouPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    </div>
+  )
+}
+
+export default function ThankYouPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ThankYouContent />
+    </Suspense>
   )
 } 

@@ -140,7 +140,7 @@ export async function getQRCodeForGuest(guestId: string, eventId: string) {
   }
 }
 
-export async function generatePlusOneQRCode(guestId: string, eventId: string, type: 'REGULAR' | 'VIP' = 'REGULAR', plusOneName: string) {
+export async function generatePlusOneQRCode(guestId: string, eventId: string, type: 'REGULAR' | 'VIP' = 'REGULAR') {
   try {
     // This function is deprecated - use generateQRCode with the plus-one's guest ID instead
     // For backward compatibility, we'll still create a QR code but log a warning

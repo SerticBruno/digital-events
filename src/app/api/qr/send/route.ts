@@ -234,7 +234,6 @@ export async function POST(request: NextRequest) {
           }
 
           let plusOneQRCode = null
-          let plusOneQRGenerated = false
           
           // Generate QR code for plus-one (if plus-one email exists)
           if (guest.plusOneEmail && guest.plusOneName) {
@@ -277,7 +276,6 @@ export async function POST(request: NextRequest) {
                 
                 if (plusOneQRResult.success) {
                   plusOneQRCode = plusOneQRResult.code
-                  plusOneQRGenerated = true
                   totalQRCodesGenerated++
                   
                   // Directly update the plus-one's QR code status to SENT since we're sending it via email
@@ -314,8 +312,7 @@ export async function POST(request: NextRequest) {
             plusOneQRCode || null,
             qrType,
             eventId,
-            guest.plusOneName || null,
-            guest.plusOneEmail || null
+            guest.plusOneName || null
           )
 
           if (emailResult.success) {
@@ -401,8 +398,7 @@ async function sendQRCodeEmailWithPlusOne(
   plusOneQRCode: string | null,
   qrType: string,
   eventId: string,
-  plusOneName: string | null,
-  plusOneEmail: string | null
+  plusOneName: string | null
 ) {
   try {
     // Get event details
@@ -426,7 +422,7 @@ async function sendQRCodeEmailWithPlusOne(
     
     // Create email content
     let subject = `Entry Pass - ${event.name}`
-    let greeting = `Dear ${guestName},`
+    const greeting = `Dear ${guestName},`
     let description = 'Thank you for confirming your attendance. Please find your QR codes below:'
 
     if (qrType === 'VIP') {

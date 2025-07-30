@@ -23,6 +23,7 @@ interface Guest {
       name: string
     }
   }>
+  [key: string]: unknown
 }
 
 export default function GuestsPage() {

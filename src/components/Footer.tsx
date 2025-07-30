@@ -20,7 +20,7 @@ export default function Footer() {
               </div>
               <p className="text-gray-300 mb-4 max-w-md">
                 Streamline your event management with our comprehensive digital platform. 
-                From guest management to QR code check-ins, we've got you covered.
+                From guest management to QR code check-ins, we&apos;ve got you covered.
               </p>
               <div className="flex items-center space-x-4">
                 <a 

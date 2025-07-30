@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-export default function SurveyThankYou() {
+function SurveyThankYouContent() {
   const searchParams = useSearchParams()
   const [isCompleted, setIsCompleted] = useState(false)
 
@@ -43,5 +43,29 @@ export default function SurveyThankYou() {
         </div>
       </div>
     </div>
+  )
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+        <div className="mb-6">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h1>
+          <p className="text-gray-600">Please wait while we load your survey information.</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function SurveyThankYou() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <SurveyThankYouContent />
+    </Suspense>
   )
 } 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { CheckCircle, XCircle, UserPlus, Calendar, MapPin, Mail, Users, ArrowLeft, Gift } from 'lucide-react'
+import { CheckCircle, XCircle, UserPlus, Calendar, MapPin, Mail, ArrowLeft, Gift } from 'lucide-react'
 import { getButtonClasses, componentStyles } from '@/lib/design-system'
 
 interface Guest {
@@ -22,17 +22,6 @@ interface Event {
   location?: string
 }
 
-interface Invitation {
-  id: string
-  type: string
-  status: string
-  response?: string
-  hasPlusOne: boolean
-  plusOneName?: string
-  plusOneEmail?: string
-  respondedAt?: string
-}
-
 export default function RespondPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -42,7 +31,6 @@ export default function RespondPage() {
 
   const [guest, setGuest] = useState<Guest | null>(null)
   const [event, setEvent] = useState<Event | null>(null)
-  const [invitation, setInvitation] = useState<Invitation | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -97,7 +85,6 @@ export default function RespondPage() {
       const data = await response.json()
       setGuest(data.guest)
       setEvent(data.event)
-      setInvitation(data.invitation)
       
       // Check if guest has already responded
       if (data.invitation && data.invitation.response) {
@@ -371,21 +358,21 @@ export default function RespondPage() {
                       <div className={`${componentStyles.card.base} shadow-lg`}>
                         <div className="p-6">
                           <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
-                            What's Next?
+                            What&apos;s Next?
                           </h3>
                           
                           {selectedResponse === 'coming' && (
                             <div className="space-y-3 text-gray-600">
-                              <p>• You'll receive a QR code entry pass closer to the event date</p>
+                              <p>• You&apos;ll receive a QR code entry pass closer to the event date</p>
                               <p>• Please arrive 15 minutes before the event starts</p>
-                              <p>• Don't forget to bring your QR code with you</p>
+                              <p>• Don&apos;t forget to bring your QR code with you</p>
                               <p className="text-sm text-blue-600 mt-4">💡 You can update your response anytime by clicking the email links again</p>
                             </div>
                           )}
                           
                           {selectedResponse === 'coming_with_plus_one' && (
                             <div className="space-y-3 text-gray-600">
-                              <p>• We've sent an invitation to your guest</p>
+                              <p>• We&apos;ve sent an invitation to your guest</p>
                               <p>• Both you and your guest will receive QR codes closer to the event</p>
                               <p>• Please arrive 15 minutes before the event starts</p>
                               <p className="text-sm text-blue-600 mt-4">💡 You can update your response anytime by clicking the email links again</p>
@@ -394,7 +381,7 @@ export default function RespondPage() {
                           
                           {selectedResponse === 'not_coming' && (
                             <div className="space-y-3 text-gray-600">
-                              <p>• We've noted your response in our records</p>
+                              <p>• We&apos;ve noted your response in our records</p>
                               <p>• We hope to see you at future events</p>
                               <p>• Feel free to reach out if your plans change</p>
                               <p className="text-sm text-blue-600 mt-4">💡 You can update your response anytime by clicking the email links again</p>
@@ -427,7 +414,7 @@ export default function RespondPage() {
                       >
                         <div className="flex items-center justify-center">
                           <CheckCircle className="w-6 h-6 mr-3" />
-                          <span className="text-lg font-medium">Yes, I'm Coming</span>
+                          <span className="text-lg font-medium">Yes, I&apos;m Coming</span>
                         </div>
                       </button>
 
@@ -442,7 +429,7 @@ export default function RespondPage() {
                       >
                         <div className="flex items-center justify-center">
                           <UserPlus className="w-6 h-6 mr-3" />
-                          <span className="text-lg font-medium">Yes, I'm Coming with a Guest</span>
+                          <span className="text-lg font-medium">Yes, I&apos;m Coming with a Guest</span>
                         </div>
                       </button>
 
@@ -457,7 +444,7 @@ export default function RespondPage() {
                       >
                         <div className="flex items-center justify-center">
                           <XCircle className="w-6 h-6 mr-3" />
-                          <span className="text-lg font-medium">No, I Can't Come</span>
+                          <span className="text-lg font-medium">No, I Can&apos;t Come</span>
                         </div>
                       </button>
                     </div>
@@ -466,19 +453,19 @@ export default function RespondPage() {
                   <div className="space-y-6">
                     <div className="p-4 bg-blue-50 rounded-lg">
                       <h4 className="font-medium text-blue-900 mb-2">Guest Information</h4>
-                      <p className="text-sm text-blue-700">Please provide your guest's email address so we can send them an invitation.</p>
+                      <p className="text-sm text-blue-700">Please provide your guest&apos;s email address so we can send them an invitation.</p>
                     </div>
 
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Guest's Email *
+                          Guest&apos;s Email *
                         </label>
                         <input
                           type="email"
                           value={plusOneEmail}
                           onChange={(e) => setPlusOneEmail(e.target.value)}
-                          placeholder="Enter your guest's email address"
+                          placeholder="Enter your guest&apos;s email address"
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-lg"
                         />
                       </div>

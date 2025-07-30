@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User, RefreshCw, Edit, Trash2, Calendar, MapPin, Eye } from 'lucide-react'
+import { Users, Mail, QrCode, BarChart3, Plus, Send, Download, X, Upload, Scan, User, Edit, Trash2, Calendar, MapPin, Eye } from 'lucide-react'
 import EventForm from '@/components/EventForm'
 import GuestForm from '@/components/GuestForm'
 import CSVUpload from '@/components/CSVUpload'
@@ -11,7 +11,12 @@ import { getButtonClasses, componentStyles } from '@/lib/design-system'
 
 // Survey Stats Component
 function SurveyStats({ eventId }: { eventId: string }) {
-  const [stats, setStats] = useState<any>(null)
+  const [stats, setStats] = useState<{
+    sentInvitations?: number
+    openedInvitations?: number
+    completedSurveys?: number
+    averageRating?: number
+  } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -100,6 +105,7 @@ interface Guest {
     status: string
     usedAt?: string
   }>
+  [key: string]: unknown
 }
 
 export default function Dashboard() {
@@ -114,7 +120,7 @@ export default function Dashboard() {
   const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set())
   const [sendingEmails, setSendingEmails] = useState(false)
 
-  const [refreshing, setRefreshing] = useState(false)
+
   const [showEditEventModal, setShowEditEventModal] = useState(false)
   const [showEditGuestModal, setShowEditGuestModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
@@ -309,7 +315,6 @@ export default function Dashboard() {
 
   const fetchGuests = async (eventId: string) => {
     try {
-      setRefreshing(true)
       const response = await fetch(`/api/guests?eventId=${eventId}`)
       const data = await response.json()
       
@@ -319,8 +324,6 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Failed to fetch guests:', error)
       setGuests([])
-    } finally {
-      setRefreshing(false)
     }
   }
 
@@ -493,77 +496,7 @@ export default function Dashboard() {
 
 
 
-  const sendPlusOneInvitations = async (guestIds: string[]) => {
-    if (!selectedEvent) {
-      alert('Please select an event first')
-      return
-    }
 
-    if (guestIds.length === 0) {
-      alert('Please select at least one guest')
-      return
-    }
-
-    // Prompt for plus-one information
-    const plusOneEmails: string[] = []
-    const plusOneNames: string[] = []
-
-    for (const guestId of guestIds) {
-      const guest = guests.find(g => g.id === guestId)
-      if (!guest) continue
-
-      const plusOneEmail = prompt(`Enter plus-one email for ${guest.firstName} ${guest.lastName}:`)
-      const plusOneName = prompt(`Enter plus-one name for ${guest.firstName} ${guest.lastName}:`)
-      
-      if (plusOneEmail && plusOneName) {
-        plusOneEmails.push(plusOneEmail)
-        plusOneNames.push(plusOneName)
-      } else {
-        alert('Plus-one email and name are required')
-        return
-      }
-    }
-
-    setSendingEmails(true)
-    try {
-      const response = await fetch('/api/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          type: 'plus_one_invitation', 
-          guestIds, 
-          eventId: selectedEvent.id,
-          plusOneEmails,
-          plusOneNames
-        })
-      })
-      const result = await response.json()
-      
-      if (response.ok) {
-        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
-        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
-        
-        let message = `Successfully sent ${successCount} plus-one invitations`
-        if (failureCount > 0) {
-          message += `, ${failureCount} failed`
-        }
-        
-
-        alert(message)
-        // Keep selected guests visible for further actions
-        if (selectedEvent) {
-          fetchGuests(selectedEvent.id)
-        }
-      } else {
-        alert(`Error: ${result.error}`)
-      }
-    } catch (error) {
-      console.error('Failed to send plus-one invitations:', error)
-      alert('Failed to send plus-one invitations')
-    } finally {
-      setSendingEmails(false)
-    }
-  }
 
   const sendQRCodesToConfirmedAttendees = async () => {
     if (!selectedEvent) {
@@ -848,55 +781,7 @@ export default function Dashboard() {
     }
   }
 
-  const regenerateMissingQRCodes = async () => {
-    if (!selectedEvent) return
 
-    setSendingEmails(true)
-    try {
-      const guestsWithoutQRCodes = guests.filter(guest => 
-        !guest.qrCodes || guest.qrCodes.length === 0
-      )
-      
-      if (guestsWithoutQRCodes.length === 0) {
-        alert('All guests already have QR codes')
-        return
-      }
-      
-      const guestIds = guestsWithoutQRCodes.map(g => g.id)
-      
-      const response = await fetch('/api/qr/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          guestIds, 
-          eventId: selectedEvent.id,
-          type: 'REGULAR'
-        })
-      })
-      
-      const result = await response.json()
-      
-      if (response.ok) {
-        const successCount = result.results?.filter((r: { success: boolean }) => r.success).length || 0
-        const failureCount = result.results?.filter((r: { success: boolean }) => !r.success).length || 0
-        
-        let message = `Successfully generated QR codes for ${successCount} guests`
-        if (failureCount > 0) {
-          message += `, ${failureCount} failed`
-        }
-        
-        alert(message)
-        await fetchGuests(selectedEvent.id)
-      } else {
-        alert(`Error: ${result.error}`)
-      }
-    } catch (error) {
-      console.error('Failed to regenerate QR codes:', error)
-      alert('Failed to regenerate QR codes')
-    } finally {
-      setSendingEmails(false)
-    }
-  }
 
   const sendSurveysToAttendees = async () => {
     if (!selectedEvent) {
