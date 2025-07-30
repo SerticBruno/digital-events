@@ -40,7 +40,7 @@ export async function GET() {
     }
     
     // Test a simple guest query
-    let sampleGuests = []
+    let sampleGuests: Array<{ id: string; email: string; firstName: string; lastName: string }> = []
     try {
       sampleGuests = await prisma.guest.findMany({
         take: 5,
