@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Check environment variables
     const envCheck = {
@@ -37,10 +37,10 @@ export async function GET(request: NextRequest) {
     // Test event_guests query
     let eventGuestCount = 0
     try {
-      eventGuestCount = await prisma.$queryRaw<Array<{ count: bigint }>>`
+      const eventGuestResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(*) as count FROM event_guests
       `
-      eventGuestCount = Number(eventGuestCount[0]?.count || 0)
+      eventGuestCount = Number(eventGuestResult[0]?.count || 0)
     } catch (error) {
       console.error('Event guests query error:', error)
     }
