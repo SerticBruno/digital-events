@@ -163,14 +163,24 @@ export default function GuestsPage() {
 
   const fetchGuests = async () => {
     try {
+      console.log('Fetching guests from API...')
       const response = await fetch('/api/guests/all')
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`)
+      }
+      
       const data = await response.json()
+      console.log('API response:', data)
       
       // Ensure data is an array
       const guestsArray = Array.isArray(data) ? data : []
+      console.log(`Setting ${guestsArray.length} guests`)
       setGuests(guestsArray)
     } catch (error) {
       console.error('Failed to fetch guests:', error)
+      alert(`Failed to load guests: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setGuests([])
     } finally {
       setLoading(false)

@@ -11,14 +11,18 @@ interface TransformedGuest {
   phone: string | null
   isVip: boolean
   isPlusOne: boolean
-  event: {
-    id: string
-    name: string
-  } | null
+  eventGuests?: Array<{
+    event: {
+      id: string
+      name: string
+    }
+  }>
 }
 
 export async function GET() {
   try {
+    console.log('Fetching all guests...')
+    
     // Get all guests
     const guests = await prisma.guest.findMany({
       select: {
@@ -34,34 +38,45 @@ export async function GET() {
       },
       take: 50 // Limit results
     })
+    
+    console.log(`Found ${guests.length} guests in database`)
 
     // Get event relationships for these guests
-    const eventGuests = await prisma.$queryRaw<Array<{
+    let eventGuests: Array<{
       guestId: string;
       eventId: string;
       eventName: string;
-    }>>`
-      SELECT eg.guestId, e.id as eventId, e.name as eventName
-      FROM event_guests eg
-      JOIN events e ON eg.eventId = e.id
-      WHERE eg.guestId IN (${guests.map(g => g.id).join(',')})
-    `
+    }> = []
+    
+    if (guests.length > 0) {
+      eventGuests = await prisma.$queryRaw<Array<{
+        guestId: string;
+        eventId: string;
+        eventName: string;
+      }>>`
+        SELECT eg.guestId, e.id as eventId, e.name as eventName
+        FROM event_guests eg
+        JOIN events e ON eg.eventId = e.id
+        WHERE eg.guestId IN (${guests.map(g => g.id).join(',')})
+      `
+    }
 
-    // Create a map of guest ID to their first event
-    const guestEventMap = new Map<string, { id: string; name: string }>()
+    // Create a map of guest ID to their events
+    const guestEventMap = new Map<string, Array<{ id: string; name: string }>>()
     eventGuests.forEach((eg) => {
       if (!guestEventMap.has(eg.guestId)) {
-        guestEventMap.set(eg.guestId, { id: eg.eventId, name: eg.eventName })
+        guestEventMap.set(eg.guestId, [])
       }
+      guestEventMap.get(eg.guestId)!.push({ id: eg.eventId, name: eg.eventName })
     })
 
     // Transform the data to match the expected format
     const transformedGuests: TransformedGuest[] = guests.map(guest => ({
       ...guest,
-      event: guestEventMap.get(guest.id) || null
+      eventGuests: guestEventMap.get(guest.id)?.map(event => ({ event })) || []
     }))
 
-    console.log('Total guests in database:', transformedGuests.length)
+    console.log('Total guests returned:', transformedGuests.length)
     return NextResponse.json(transformedGuests)
 
   } catch (error) {
