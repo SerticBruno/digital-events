@@ -16,6 +16,8 @@ interface QRScanResult {
     company?: string
     isVip: boolean
   }
+  timeAgo?: string
+  wasRecentlyUsed?: boolean
 }
 
 export default function QRScanner() {
@@ -294,6 +296,18 @@ export default function QRScanner() {
     }
   }
 
+  const formatTimeAgo = (seconds: number): string => {
+    if (seconds < 60) {
+      return `${seconds} second${seconds !== 1 ? 's' : ''} ago`
+    } else if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60)
+      return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+    } else {
+      const hours = Math.floor(seconds / 3600)
+      return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+    }
+  }
+
   const handleManualQRInput = async () => {
     const qrCode = prompt('Enter QR code manually:')
     if (qrCode) {
@@ -323,17 +337,31 @@ export default function QRScanner() {
 
       const result = await response.json()
       
-      if (response.ok && result.success) {
-        const wasAlreadyUsed = result.qrCode?.wasAlreadyUsed || false
-        const message = wasAlreadyUsed 
-          ? `Welcome back! ${result.guest.firstName} ${result.guest.lastName} was already checked in.`
-          : `Welcome! ${result.guest.firstName} ${result.guest.lastName} has been checked in successfully.`
+             if (response.ok && result.success) {
+         const wasAlreadyUsed = result.qrCode?.wasAlreadyUsed || false
+         const wasRecentlyUsed = result.qrCode?.wasRecentlyUsed || false
+         
+         // Calculate time since QR code was used
+         const usedAt = result.qrCode?.usedAt ? new Date(result.qrCode.usedAt) : new Date()
+         const now = new Date()
+         const timeDiff = Math.floor((now.getTime() - usedAt.getTime()) / 1000) // seconds
+         
+         let message
+         if (wasRecentlyUsed) {
+           message = `Welcome back! ${result.guest.firstName} ${result.guest.lastName} was just checked in.`
+         } else if (wasAlreadyUsed) {
+           message = `Welcome back! ${result.guest.firstName} ${result.guest.lastName} was already checked in.`
+         } else {
+           message = `Welcome! ${result.guest.firstName} ${result.guest.lastName} has been checked in successfully.`
+         }
         
-        setScanResult({
-          success: true,
-          message,
-          guest: result.guest
-        })
+                 setScanResult({
+           success: true,
+           message,
+           guest: result.guest,
+           timeAgo: formatTimeAgo(timeDiff),
+           wasRecentlyUsed
+         })
         
         // Stop scanning when we get a successful result
         stopScanning()
@@ -617,12 +645,19 @@ export default function QRScanner() {
                          </span>
                        )}
                      </div>
-                     {scanResult.guest.company && (
-                       <p className="text-sm text-gray-600">{scanResult.guest.company}</p>
-                     )}
-                                           <p className="text-sm text-gray-500 mt-1">
+                                           {scanResult.guest.company && (
+                        <p className="text-sm text-gray-600">{scanResult.guest.company}</p>
+                      )}
+                      <p className="text-sm text-gray-500 mt-1">
                         Checked in at {new Date().toLocaleTimeString()}
                       </p>
+                      {scanResult.timeAgo && (
+                        <p className={`text-xs mt-1 ${
+                          scanResult.wasRecentlyUsed ? 'text-green-600' : 'text-gray-500'
+                        }`}>
+                          QR code used {scanResult.timeAgo}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-400 mt-1">
                         Ready to scan next guest
                       </p>

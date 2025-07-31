@@ -39,18 +39,27 @@ export async function POST(request: NextRequest) {
 
     const qrCode = qrCodeRecord[0]
 
-    // Check if QR code is already used
+    // Check if QR code is already used (but allow re-scanning within 15 seconds)
     if (qrCode.status === 'USED' && !allowReuse) {
-      return NextResponse.json(
-        { 
-          error: 'QR code already used',
-          details: {
-            usedAt: qrCode.usedAt,
-            message: 'This QR code has already been scanned. For testing, you can set allowReuse=true'
-          }
-        },
-        { status: 409 }
-      )
+      const usedAt = qrCode.usedAt ? new Date(qrCode.usedAt) : null
+      const now = new Date()
+      const timeDiff = usedAt ? (now.getTime() - usedAt.getTime()) / 1000 : 0 // seconds
+      
+      // If used more than 15 seconds ago, show error
+      if (timeDiff > 15) {
+        return NextResponse.json(
+          { 
+            error: 'QR code already used',
+            details: {
+              usedAt: qrCode.usedAt,
+              message: 'This QR code has already been scanned. For testing, you can set allowReuse=true'
+            }
+          },
+          { status: 409 }
+        )
+      }
+      // If used within 15 seconds, treat it as a successful re-scan
+      console.log(`QR code used ${timeDiff.toFixed(1)} seconds ago, allowing re-scan`)
     }
 
     // Only update status if not already used
@@ -87,6 +96,12 @@ export async function POST(request: NextRequest) {
 
     const guest = guestRecord[0]
 
+    // Determine if this was a recent re-scan
+    const usedAt = qrCode.usedAt ? new Date(qrCode.usedAt) : null
+    const now = new Date()
+    const timeDiff = usedAt ? (now.getTime() - usedAt.getTime()) / 1000 : 0
+    const wasRecentlyUsed = qrCode.status === 'USED' && timeDiff <= 15
+
     return NextResponse.json({
       success: true,
       guest: {
@@ -103,7 +118,8 @@ export async function POST(request: NextRequest) {
         type: qrCode.type,
         status: 'USED',
         usedAt: qrCode.usedAt || new Date().toISOString(),
-        wasAlreadyUsed: qrCode.status === 'USED'
+        wasAlreadyUsed: qrCode.status === 'USED',
+        wasRecentlyUsed: wasRecentlyUsed
       }
     })
   } catch (error) {
