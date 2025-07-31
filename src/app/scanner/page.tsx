@@ -29,6 +29,7 @@ export default function QRScanner() {
   const [isSafari, setIsSafari] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [isVideoPaused, setIsVideoPaused] = useState(true)
+  const [isValidating, setIsValidating] = useState(false) // Prevent multiple simultaneous validations
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scanningRef = useRef<boolean>(false)
@@ -130,10 +131,11 @@ export default function QRScanner() {
       
              if (videoRef.current) {
          videoRef.current.srcObject = stream
-         setIsScanning(true)
-         setCameraError('')
-         setScanResult(null)
-         setLastScannedCode('')
+                   setIsScanning(true)
+          setCameraError('')
+          setScanResult(null)
+          setLastScannedCode('')
+          setIsValidating(false)
          
                    // Simplified video initialization
           videoRef.current.onloadedmetadata = () => {
@@ -280,7 +282,8 @@ export default function QRScanner() {
       inversionAttempts: "dontInvert",
     })
 
-    if (code && code.data !== lastScannedCode) {
+    if (code && code.data !== lastScannedCode && !isValidating) {
+      console.log('QR Code detected:', code.data)
       setLastScannedCode(code.data)
       validateQRCode(code.data)
     }
@@ -299,6 +302,14 @@ export default function QRScanner() {
   }
 
   const validateQRCode = async (qrCode: string) => {
+    if (isValidating) {
+      console.log('Validation already in progress, skipping...')
+      return
+    }
+    
+    setIsValidating(true)
+    console.log('Starting validation for QR code:', qrCode)
+    
     try {
       const response = await fetch('/api/qr/validate', {
         method: 'POST',
@@ -306,7 +317,7 @@ export default function QRScanner() {
         body: JSON.stringify({ 
           code: qrCode,
           eventId: selectedEvent,
-          allowReuse: false // Set to true for testing to allow re-scanning used codes
+          allowReuse: false // Set to false to prevent re-scanning used codes
         })
       })
 
@@ -347,18 +358,21 @@ export default function QRScanner() {
           setScanResult(null)
         }, 3000)
       }
-    } catch (error) {
-      console.error('Failed to validate QR code:', error)
-      setScanResult({
-        success: false,
-        message: 'Failed to validate QR code'
-      })
-      
-      // Auto-clear error result after 3 seconds
-      setTimeout(() => {
-        setScanResult(null)
-      }, 3000)
-    }
+          } catch (error) {
+        console.error('Failed to validate QR code:', error)
+        setScanResult({
+          success: false,
+          message: 'Failed to validate QR code'
+        })
+        
+        // Auto-clear error result after 3 seconds
+        setTimeout(() => {
+          setScanResult(null)
+        }, 3000)
+      } finally {
+        setIsValidating(false)
+        console.log('Validation completed for QR code:', qrCode)
+      }
   }
 
 
