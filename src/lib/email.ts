@@ -72,7 +72,7 @@ export async function sendEmail(data: EmailData) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+        from: 'onboarding@resend.dev',
         to: [data.to],
         subject: data.subject,
         html: data.html,

@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+        from: 'onboarding@resend.dev',
         to: [to],
         subject: 'Test Email - Digital Events System',
         html: testHtml,
