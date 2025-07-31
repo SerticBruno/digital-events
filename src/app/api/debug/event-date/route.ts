@@ -15,7 +15,31 @@ export async function GET(request: NextRequest) {
 
     console.log('Debugging event date for:', { guestId, eventId })
 
-    const result: any = {
+    interface DebugResult {
+      guestId: string | null;
+      eventId: string | null;
+      timestamp: string;
+      guest?: { id: string; firstName: string; lastName: string; email: string } | null;
+      guestError?: string;
+      event?: { id: string; name: string; date: Date; location: string | null } | null;
+      eventError?: string;
+      eventGuest?: any;
+      eventGuestError?: string;
+      rawEventData?: Array<{ eventId: string; eventName: string; eventDate: unknown; eventLocation: string | null }>;
+      rawQueryError?: string;
+      dateTests?: {
+        rawDate: unknown;
+        rawDateType: string;
+        rawDateString: string;
+        newDateResult: Date;
+        newDateValid: boolean;
+        toISOString: string;
+      };
+      allEvents?: Array<{ eventId: string; eventName: string; eventDate: unknown }>;
+      allEventsError?: string;
+    }
+
+    const result: DebugResult = {
       guestId,
       eventId,
       timestamp: new Date().toISOString()
@@ -68,7 +92,7 @@ export async function GET(request: NextRequest) {
       const rawEventData = await prisma.$queryRaw<Array<{
         eventId: string;
         eventName: string;
-        eventDate: any;
+        eventDate: unknown;
         eventLocation: string | null;
       }>>`
         SELECT 
@@ -107,7 +131,7 @@ export async function GET(request: NextRequest) {
       const allEvents = await prisma.$queryRaw<Array<{
         eventId: string;
         eventName: string;
-        eventDate: any;
+        eventDate: unknown;
       }>>`
         SELECT 
           e.id as "eventId",
