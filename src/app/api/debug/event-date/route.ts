@@ -124,13 +124,14 @@ export async function GET(request: NextRequest) {
       // Test date parsing if we have data
       if (rawEventData.length > 0) {
         const rawDate = rawEventData[0].eventDate
+        const dateValue = rawDate as string | number | Date
         result.dateTests = {
           rawDate,
           rawDateType: typeof rawDate,
           rawDateString: String(rawDate),
-          newDateResult: new Date(rawDate),
-          newDateValid: !isNaN(new Date(rawDate).getTime()),
-          toISOString: new Date(rawDate).toISOString()
+          newDateResult: new Date(dateValue),
+          newDateValid: !isNaN(new Date(dateValue).getTime()),
+          toISOString: new Date(dateValue).toISOString()
         }
       }
     } catch (error) {
