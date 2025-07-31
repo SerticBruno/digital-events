@@ -373,79 +373,16 @@ export default function QRScanner() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Scanner Controls */}
-        <div className={componentStyles.card.base}>
-          <div className={componentStyles.card.header}>
-            <h2 className="text-lg font-medium text-gray-900">Scanner Controls</h2>
-          </div>
-          <div className={componentStyles.card.content}>
-            <div className="flex flex-wrap gap-4">
-              {!isScanning ? (
-                <button
-                  onClick={startScanning}
-                  disabled={isRequestingCamera}
-                  className={getButtonClasses('primary')}
-                >
-                  {isRequestingCamera ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Requesting Camera...
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="w-4 h-4" />
-                      Start Scanning
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button
-                  onClick={stopScanning}
-                  className={getButtonClasses('danger')}
-                >
-                  <XCircle className="w-4 h-4" />
-                  Stop Scanning
-                </button>
-              )}
-              
-              <button
-                onClick={handleManualQRInput}
-                className={getButtonClasses('secondary')}
-              >
-                <QrCode className="w-4 h-4" />
-                Manual Input
-              </button>
-              
-              <button
-                onClick={resetScanner}
-                className={getButtonClasses('outline')}
-              >
-                <RotateCcw className="w-4 h-4" />
-                Reset
-              </button>
-            </div>
-          </div>
-        </div>
+        
 
-                 {/* Camera Scanner Container */}
-         {isScanning && (
-           <div className="fixed inset-0 bg-black z-50">
-             {/* Header */}
-             <div className="absolute top-0 left-0 right-0 z-10 bg-black bg-opacity-50 text-white p-4">
-               <div className="flex items-center justify-between">
-                 <h3 className="text-lg font-semibold">QR Code Scanner</h3>
-                 <button
-                   onClick={stopScanning}
-                   className="text-white hover:text-gray-300 transition-colors"
-                 >
-                   <XCircle className="w-6 h-6" />
-                 </button>
-               </div>
-             </div>
-             
-             {/* Full Screen Camera */}
-             <div className="relative w-full h-full">
-               {/* Video Element - Full Screen */}
+                 {/* Camera Preview Box - Always Visible */}
+         <div className={componentStyles.card.base}>
+           <div className={componentStyles.card.header}>
+             <h2 className="text-lg font-medium text-gray-900">Camera Preview</h2>
+           </div>
+           <div className={componentStyles.card.content}>
+             <div className="relative bg-black rounded-lg overflow-hidden">
+               {/* Video Element */}
                <video
                  ref={videoRef}
                  autoPlay
@@ -453,7 +390,7 @@ export default function QRScanner() {
                  muted
                  controls={false}
                  webkit-playsinline="true"
-                 className="w-full h-full object-cover"
+                 className="w-full h-96 object-cover"
                  style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
                  onClick={() => {
                    // Safari iOS sometimes needs a tap to start video
@@ -470,51 +407,75 @@ export default function QRScanner() {
                  className="hidden"
                />
                
-               {/* Scanning Frame Overlay */}
-               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                 <div className="relative">
-                   {/* Outer frame */}
-                   <div className="w-64 h-64 border-2 border-white rounded-lg relative">
-                     {/* Corner indicators */}
-                     <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-400 rounded-tl-lg"></div>
-                     <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-400 rounded-tr-lg"></div>
-                     <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-400 rounded-bl-lg"></div>
-                     <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-400 rounded-br-lg"></div>
-                     
-                     {/* Scanning line animation */}
-                     <div className="absolute top-0 left-0 w-full h-1 bg-blue-400 animate-pulse"></div>
-                   </div>
-                   
-                   {/* Instructions */}
-                   <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 text-center">
-                     <p className="text-white text-lg font-medium bg-black bg-opacity-50 px-4 py-2 rounded-full">
-                       Position QR code in frame
+               {/* Initial State - Camera Not Started */}
+               {!isScanning && !cameraError && (
+                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75">
+                   <div className="text-center text-white">
+                     <Camera className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                     <p className="text-lg font-medium mb-2">Camera Ready</p>
+                     <p className="text-sm text-gray-300 mb-4">
+                       Click "Start Scanning" to begin
                      </p>
+                     <div className="w-48 h-48 border-2 border-gray-400 rounded-lg mx-auto relative opacity-50">
+                       {/* Corner indicators */}
+                       <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-gray-400 rounded-tl-lg"></div>
+                       <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-gray-400 rounded-tr-lg"></div>
+                       <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-gray-400 rounded-bl-lg"></div>
+                       <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-gray-400 rounded-br-lg"></div>
+                     </div>
                    </div>
                  </div>
-               </div>
+               )}
                
-               {/* Status Indicator */}
-               <div className="absolute top-20 right-4">
-                 <div className="flex items-center space-x-2 bg-black bg-opacity-50 text-white px-4 py-2 rounded-full">
-                   <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                   <span className="text-base">Scanning...</span>
+               {/* Scanning Frame Overlay - Only when scanning */}
+               {isScanning && (
+                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                   <div className="relative">
+                     {/* Outer frame */}
+                     <div className="w-48 h-48 border-2 border-white rounded-lg relative">
+                       {/* Corner indicators */}
+                       <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-400 rounded-tl-lg"></div>
+                       <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-400 rounded-tr-lg"></div>
+                       <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-400 rounded-bl-lg"></div>
+                       <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-blue-400 rounded-br-lg"></div>
+                       
+                       {/* Scanning line animation */}
+                       <div className="absolute top-0 left-0 w-full h-0.5 bg-blue-400 animate-pulse"></div>
+                     </div>
+                     
+                     {/* Instructions */}
+                     <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 text-center">
+                       <p className="text-white text-sm font-medium bg-black bg-opacity-50 px-3 py-1 rounded-full">
+                         Position QR code in frame
+                       </p>
+                     </div>
+                   </div>
                  </div>
-               </div>
+               )}
+               
+               {/* Status Indicator - Only when scanning */}
+               {isScanning && (
+                 <div className="absolute top-3 right-3">
+                   <div className="flex items-center space-x-2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full">
+                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                     <span className="text-sm">Scanning...</span>
+                   </div>
+                 </div>
+               )}
                
                {/* Safari iOS tap indicator */}
-               {isSafari && isIOS && isVideoPaused && (
-                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75">
-                   <div className="bg-white p-6 rounded-lg text-center max-w-sm">
-                     <p className="text-lg font-medium text-gray-800 mb-3">Camera Ready</p>
-                     <p className="text-sm text-gray-600 mb-4">Tap the screen to start camera</p>
+               {isSafari && isIOS && isVideoPaused && isScanning && (
+                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                   <div className="bg-white p-4 rounded-lg text-center max-w-xs">
+                     <p className="text-sm font-medium text-gray-800 mb-2">Camera Ready</p>
+                     <p className="text-xs text-gray-600 mb-3">Tap the screen to start camera</p>
                      <button
                        onClick={() => {
                          if (videoRef.current && videoRef.current.paused) {
                            videoRef.current.play().catch(console.error)
                          }
                        }}
-                       className="bg-blue-500 text-white px-6 py-3 rounded-lg text-base font-medium hover:bg-blue-600 transition-colors"
+                       className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition-colors"
                      >
                        Start Camera
                      </button>
@@ -522,51 +483,67 @@ export default function QRScanner() {
                  </div>
                )}
                
-               {/* Footer Instructions */}
-               <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-4">
-                 <div className="text-center">
-                   <p className="text-base mb-2">
-                     Point your camera at the QR code to scan automatically
-                   </p>
-                   <button
-                     onClick={handleManualQRInput}
-                     className="text-blue-300 hover:text-blue-100 text-sm font-medium transition-colors"
-                   >
-                     Or enter code manually
-                   </button>
+               {/* Camera Error Display */}
+               {cameraError && (
+                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75">
+                   <div className="bg-white p-4 rounded-lg text-center max-w-xs">
+                     <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                     <p className="text-sm text-gray-800 mb-2">Camera Error</p>
+                     <p className="text-xs text-gray-600 mb-3">{cameraError}</p>
+                     <button
+                       onClick={startScanning}
+                       disabled={isRequestingCamera}
+                       className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+                     >
+                       {isRequestingCamera ? 'Retrying...' : 'Retry'}
+                     </button>
+                   </div>
                  </div>
-               </div>
+               )}
+             </div>
+             
+             {/* Camera Controls */}
+             <div className="mt-4 flex justify-center space-x-4">
+               {!isScanning ? (
+                 <button
+                   onClick={startScanning}
+                   disabled={isRequestingCamera}
+                   className={getButtonClasses('primary')}
+                 >
+                   {isRequestingCamera ? (
+                     <>
+                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                       Requesting Camera...
+                     </>
+                   ) : (
+                     <>
+                       <Camera className="w-4 h-4" />
+                       Start Scanning
+                     </>
+                   )}
+                 </button>
+               ) : (
+                 <button
+                   onClick={stopScanning}
+                   className={getButtonClasses('danger')}
+                 >
+                   <XCircle className="w-4 h-4" />
+                   Stop Camera
+                 </button>
+               )}
+               
+               <button
+                 onClick={handleManualQRInput}
+                 className={getButtonClasses('secondary')}
+               >
+                 <QrCode className="w-4 h-4" />
+                 Manual Input
+               </button>
              </div>
            </div>
-         )}
+         </div>
 
-        {/* Camera Error */}
-        {cameraError && (
-          <div className={componentStyles.card.base}>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start">
-                  <AlertCircle className="w-5 h-5 text-red-600 mr-2 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-red-800 mb-2">{cameraError}</p>
-                    <div className="text-xs text-red-600">
-                      <p>• Make sure you&apos;re using HTTPS (required for camera access)</p>
-                      <p>• Allow camera permissions when prompted</p>
-                      <p>• Try refreshing the page if permissions are stuck</p>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={startScanning}
-                  disabled={isRequestingCamera}
-                  className="ml-4 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:opacity-50"
-                >
-                  {isRequestingCamera ? 'Retrying...' : 'Retry'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        
 
                  {/* Scan Result Modal */}
          {scanResult && (
