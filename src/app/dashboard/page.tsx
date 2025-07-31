@@ -455,45 +455,7 @@ export default function Dashboard() {
     }
   }
 
-  const testQRSending = async () => {
-    if (!selectedEvent) {
-      alert('Please select an event first')
-      return
-    }
 
-    if (guests.length === 0) {
-      alert('No guests found for this event')
-      return
-    }
-
-    const firstGuest = guests[0]
-    const guestName = `${firstGuest.firstName} ${firstGuest.lastName}`
-    
-    if (!confirm(`Test QR code sending to ${guestName} (${firstGuest.email})?`)) {
-      return
-    }
-
-    try {
-      const response = await fetch('/api/qr/test-send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          guestId: firstGuest.id, 
-          eventId: selectedEvent.id 
-        })
-      })
-      const result = await response.json()
-      
-      if (response.ok && result.success) {
-        alert(`QR code test successful!\n\nQR Code: ${result.qrCode}\nEmail sent: ${result.emailSent}`)
-      } else {
-        alert(`QR code test failed: ${result.error}`)
-      }
-    } catch (error) {
-      console.error('Failed to test QR code sending:', error)
-      alert('Failed to test QR code sending')
-    }
-  }
 
   const sendEmails = async (type: string, guestIds: string[]) => {
     if (!selectedEvent) {
@@ -1436,13 +1398,7 @@ export default function Dashboard() {
                       <Mail className="w-4 h-4" />
                       Test Email
                     </button>
-                    <button
-                      onClick={testQRSending}
-                      className={`${getButtonClasses('outline')} w-full`}
-                    >
-                      <QrCode className="w-4 h-4" />
-                      Test QR Code
-                    </button>
+
                   </div>
                 </div>
               </div>
