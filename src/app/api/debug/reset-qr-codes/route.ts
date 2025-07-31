@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { eventId, guestId, qrCodeId } = body
 
-    const whereClause: Record<string, string> = {}
+    let whereClause: any = {}
 
     if (qrCodeId) {
       whereClause.id = qrCodeId
