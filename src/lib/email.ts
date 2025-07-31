@@ -1320,6 +1320,17 @@ export async function sendQRCode(guestId: string, eventId?: string) {
     subject: `Entry Pass: ${event.name}`,
     html
   })
+  } catch (error) {
+    console.error('Error in sendQRCode:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('sendQRCode error stack:', errorStack)
+    return { 
+      success: false, 
+      error: errorMessage,
+      errorDetails: errorStack ? errorStack.split('\n').slice(0, 3).join('\n') : undefined
+    }
+  }
 }
 
 export async function sendPlusOneInvitation(guestId: string, plusOneEmail: string, plusOneName: string, eventId?: string) {
