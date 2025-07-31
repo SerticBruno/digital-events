@@ -1364,8 +1364,8 @@ export async function sendPlusOneInvitation(guestId: string, plusOneEmail: strin
         e.location as eventLocation,
         e."maxGuests" as eventMaxGuests
       FROM event_guests eg
-      JOIN events e ON eg."eventId" = e.id
-      WHERE eg."guestId" = ${guestId}
+      JOIN events e ON eg." eventId\ = e.id
+      WHERE eg.\guestId\ = ${guestId}
       AND e.id = ${eventId}
       ORDER BY e.date ASC
       LIMIT 1
@@ -1380,8 +1380,8 @@ export async function sendPlusOneInvitation(guestId: string, plusOneEmail: strin
         e.location as eventLocation,
         e."maxGuests" as eventMaxGuests
       FROM event_guests eg
-      JOIN events e ON eg."eventId" = e.id
-      WHERE eg."guestId" = ${guestId}
+      JOIN events e ON eg." eventId\ = e.id
+      WHERE eg.\guestId\ = ${guestId}
       ORDER BY e.date ASC
       LIMIT 1
     `
@@ -1468,8 +1468,8 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
         e.location as eventLocation,
         e."maxGuests" as eventMaxGuests
       FROM event_guests eg
-      JOIN events e ON eg."eventId" = e.id
-      WHERE eg."guestId" = ${guestId}
+      JOIN events e ON eg." eventId\ = e.id
+      WHERE eg.\guestId\ = ${guestId}
       AND e.id = ${eventId}
       ORDER BY e.date ASC
       LIMIT 1
@@ -1484,8 +1484,8 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
         e.location as eventLocation,
         e."maxGuests" as eventMaxGuests
       FROM event_guests eg
-      JOIN events e ON eg."eventId" = e.id
-      WHERE eg."guestId" = ${guestId}
+      JOIN events e ON eg." eventId\ = e.id
+      WHERE eg.\guestId\ = ${guestId}
       ORDER BY e.date ASC
       LIMIT 1
     `
@@ -1724,8 +1724,8 @@ export async function sendSurvey(guestId: string, eventId?: string) {
         e.location as eventLocation,
         e."maxGuests" as eventMaxGuests
       FROM event_guests eg
-      JOIN events e ON eg."eventId" = e.id
-      WHERE eg."guestId" = ${guestId}
+      JOIN events e ON eg." eventId\ = e.id
+      WHERE eg.\guestId\ = ${guestId}
       AND e.id = ${eventId}
       ORDER BY e.date ASC
       LIMIT 1
@@ -1740,8 +1740,8 @@ export async function sendSurvey(guestId: string, eventId?: string) {
         e.location as eventLocation,
         e."maxGuests" as eventMaxGuests
       FROM event_guests eg
-      JOIN events e ON eg."eventId" = e.id
-      WHERE eg."guestId" = ${guestId}
+      JOIN events e ON eg." eventId\ = e.id
+      WHERE eg.\guestId\ = ${guestId}
       ORDER BY e.date ASC
       LIMIT 1
     `
