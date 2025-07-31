@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { QrCode, CheckCircle, XCircle, AlertCircle, Camera } from 'lucide-react'
+import { QrCode, CheckCircle, XCircle, AlertCircle, Camera, Clock } from 'lucide-react'
 import { getButtonClasses, getInputClasses, componentStyles } from '@/lib/design-system'
 import jsQR from 'jsqr'
 
@@ -367,6 +367,7 @@ export default function QRScanner() {
       } else {
         let errorMessage = result.error || 'Failed to validate QR code'
         let guestInfo = undefined
+        let timeAgoInfo = undefined
         
         // Provide more specific error messages with details
         if (response.status === 409 && result.details) {
@@ -378,6 +379,11 @@ export default function QRScanner() {
           if (details.guest) {
             guestInfo = details.guest
           }
+          
+          // Include time information for failed scans
+          if (details.timeAgo) {
+            timeAgoInfo = details.timeAgo
+          }
         } else if (response.status === 404) {
           errorMessage = 'Invalid QR code or wrong event selected'
         }
@@ -385,7 +391,8 @@ export default function QRScanner() {
         setScanResult({
           success: false,
           message: errorMessage,
-          guest: guestInfo
+          guest: guestInfo,
+          timeAgo: timeAgoInfo
         })
         
         // Auto-clear error result after 5 seconds (longer for detailed errors)
@@ -638,6 +645,23 @@ export default function QRScanner() {
                  <p className="text-gray-600 mb-4">
                    {scanResult.message}
                  </p>
+                 
+                 {/* Prominent Timer Display for Failed Scans - Show at top level */}
+                 {!scanResult.success && scanResult.timeAgo && (
+                   <div className="mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+                     <div className="flex items-center justify-center">
+                       <Clock className="w-5 h-5 text-red-600 mr-3" />
+                       <div className="text-center">
+                         <p className="text-lg font-bold text-red-800">
+                           QR Code Used {scanResult.timeAgo} Ago
+                         </p>
+                         <p className="text-sm text-red-600 mt-1">
+                           This code has already been scanned
+                         </p>
+                       </div>
+                     </div>
+                   </div>
+                 )}
                  
                  {/* Guest Information */}
                  {scanResult.guest && (
