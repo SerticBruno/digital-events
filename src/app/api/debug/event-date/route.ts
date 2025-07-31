@@ -23,7 +23,18 @@ export async function GET(request: NextRequest) {
       guestError?: string;
       event?: { id: string; name: string; date: Date; location: string | null } | null;
       eventError?: string;
-      eventGuest?: any;
+      eventGuest?: {
+        id: string;
+        createdAt: Date;
+        eventId: string;
+        guestId: string;
+        event: {
+          id: string;
+          name: string;
+          date: Date;
+          location: string | null;
+        };
+      } | null;
       eventGuestError?: string;
       rawEventData?: Array<{ eventId: string; eventName: string; eventDate: unknown; eventLocation: string | null }>;
       rawQueryError?: string;
