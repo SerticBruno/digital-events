@@ -60,7 +60,7 @@ export default function QRScanner() {
     try {
       const result = await navigator.permissions.query({ name: 'camera' as PermissionName })
       return result.state
-    } catch (error) {
+    } catch {
       console.log('Permission API not supported, will try camera access directly')
       return 'unknown'
     }
@@ -387,7 +387,7 @@ export default function QRScanner() {
                   <div>
                     <p className="text-sm text-red-800 mb-2">{cameraError}</p>
                     <div className="text-xs text-red-600">
-                      <p>• Make sure you're using HTTPS (required for camera access)</p>
+                      <p>• Make sure you&apos;re using HTTPS (required for camera access)</p>
                       <p>• Allow camera permissions when prompted</p>
                       <p>• Try refreshing the page if permissions are stuck</p>
                     </div>

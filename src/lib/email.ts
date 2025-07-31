@@ -7,28 +7,6 @@ export interface EmailData {
   from?: string
 }
 
-// Helper function to safely parse dates from database
-function parseEventDate(dateString: string | undefined | null): Date {
-  console.log('parseEventDate called with:', { dateString, type: typeof dateString })
-  
-  if (!dateString) {
-    throw new Error(`Event date is missing or null: ${dateString}`)
-  }
-  
-  try {
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) {
-      throw new Error(`Invalid date format: ${dateString}`)
-    }
-    return date
-  } catch (error) {
-    console.error('Date parsing error:', error)
-    throw new Error(`Failed to parse event date: ${dateString}. Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-  }
-}
-
-
-
 
 
 export async function sendTestEmail(to: string) {
