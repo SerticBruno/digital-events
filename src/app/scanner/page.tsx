@@ -75,6 +75,10 @@ export default function QRScanner() {
     setIsRequestingCamera(true)
     setCameraError('')
 
+    // Safari on iOS requires very specific constraints
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+
     try {
       // Stop any existing stream first
       if (videoRef.current?.srcObject) {
@@ -85,18 +89,45 @@ export default function QRScanner() {
       // Check camera permissions first
       const permissionState = await checkCameraPermissions()
       console.log('Camera permission state:', permissionState)
-
-      // Try to get camera access with mobile-friendly constraints
-      const constraints = {
-        video: {
-          facingMode: 'environment', // Use back camera on mobile
-          width: { min: 640, ideal: 1280, max: 1920 },
-          height: { min: 480, ideal: 720, max: 1080 },
-          aspectRatio: { ideal: 4/3 }
+      
+      let constraints
+      if (isSafari && isIOS) {
+        // Safari on iOS constraints
+        constraints = {
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        }
+      } else {
+        // Other browsers
+        constraints = {
+          video: {
+            facingMode: 'environment',
+            width: { min: 320, ideal: 640, max: 1280 },
+            height: { min: 240, ideal: 480, max: 720 }
+          }
         }
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      let stream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints)
+      } catch (error) {
+        // If first attempt fails on Safari iOS, try with simpler constraints
+        if (isSafari && isIOS) {
+          console.log('First attempt failed, trying with simpler constraints...')
+          const fallbackConstraints = {
+            video: {
+              facingMode: 'environment'
+            }
+          }
+          stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints)
+        } else {
+          throw error
+        }
+      }
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream
@@ -105,18 +136,29 @@ export default function QRScanner() {
         setScanResult(null)
         setLastScannedCode('')
         
-        // Wait for video to load then start scanning
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current) {
-            videoRef.current.play().then(() => {
-              console.log('Video started playing')
-              scanLoop()
-            }).catch((error) => {
-              console.error('Error playing video:', error)
-              setCameraError('Failed to start video stream. Please try again.')
-            })
-          }
-        }
+                 // Wait for video to load then start scanning
+         videoRef.current.onloadedmetadata = () => {
+           console.log('Video metadata loaded, attempting to play...')
+           if (videoRef.current) {
+             // For Safari on iOS, we need to handle play differently
+             const playVideo = async () => {
+               try {
+                 await videoRef.current!.play()
+                 console.log('Video started playing successfully')
+                 // Add a longer delay for Safari on iOS
+                 setTimeout(() => {
+                   scanLoop()
+                 }, 1000)
+               } catch (error) {
+                 console.error('Error playing video:', error)
+                 setCameraError('Failed to start video stream. Please try again.')
+                 setIsRequestingCamera(false)
+               }
+             }
+             
+             playVideo()
+           }
+         }
 
         // Handle video errors
         videoRef.current.onerror = (error) => {
@@ -124,24 +166,55 @@ export default function QRScanner() {
           setCameraError('Video stream error. Please try again.')
           setIsRequestingCamera(false)
         }
+
+                 // Additional event listeners for mobile
+         videoRef.current.oncanplay = () => {
+           console.log('Video can play')
+         }
+
+         videoRef.current.onplaying = () => {
+           console.log('Video is playing')
+         }
+
+         videoRef.current.onwaiting = () => {
+           console.log('Video is waiting')
+         }
+
+         // Safari iOS specific handling
+         if (isSafari && isIOS) {
+           videoRef.current.onloadeddata = () => {
+             console.log('Video data loaded on Safari iOS')
+           }
+           
+           videoRef.current.oncanplaythrough = () => {
+             console.log('Video can play through on Safari iOS')
+           }
+         }
       }
     } catch (error) {
       console.error('Camera access error:', error)
       let errorMessage = 'Unable to access camera. '
       
-      if (error instanceof DOMException) {
-        if (error.name === 'NotAllowedError') {
-          errorMessage += 'Please allow camera access in your browser settings and try again.'
-        } else if (error.name === 'NotFoundError') {
-          errorMessage += 'No camera found on this device.'
-        } else if (error.name === 'NotSupportedError') {
-          errorMessage += 'Camera not supported on this device.'
-        } else {
-          errorMessage += error.message
-        }
-      } else {
-        errorMessage += 'Please check permissions and try again.'
-      }
+             if (error instanceof DOMException) {
+         if (error.name === 'NotAllowedError') {
+           errorMessage += 'Please allow camera access in your browser settings and try again.'
+         } else if (error.name === 'NotFoundError') {
+           errorMessage += 'No camera found on this device.'
+         } else if (error.name === 'NotSupportedError') {
+           errorMessage += 'Camera not supported on this device.'
+         } else if (error.name === 'OverconstrainedError') {
+           errorMessage += 'Camera constraints not supported. Please try again.'
+         } else {
+           errorMessage += error.message
+         }
+       } else {
+         errorMessage += 'Please check permissions and try again.'
+       }
+       
+       // Add Safari iOS specific guidance
+       if (isSafari && isIOS) {
+         errorMessage += ' On Safari iOS, make sure you\'re using HTTPS and try refreshing the page.'
+       }
       
       setCameraError(errorMessage)
     } finally {
@@ -341,15 +414,16 @@ export default function QRScanner() {
             </div>
             <div className={componentStyles.card.content}>
               <div className="relative">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  controls={false}
-                  className="w-full max-w-2xl mx-auto rounded-lg border border-gray-300"
-                  style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
-                />
+                                 <video
+                   ref={videoRef}
+                   autoPlay
+                   playsInline
+                   muted
+                   controls={false}
+                   webkit-playsinline="true"
+                   className="w-full max-w-2xl mx-auto rounded-lg border border-gray-300"
+                   style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
+                 />
                 <canvas
                   ref={canvasRef}
                   className="hidden"
@@ -503,12 +577,18 @@ export default function QRScanner() {
                 </div>
                 <p>If camera doesn&apos;t work, use &ldquo;Manual Input&rdquo; to enter the QR code manually</p>
               </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
-                  !
-                </div>
-                <p><strong>Mobile users:</strong> Make sure to allow camera permissions when prompted. If it doesn&apos;t work, try refreshing the page.</p>
-              </div>
+                             <div className="flex items-start">
+                 <div className="w-6 h-6 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
+                   !
+                 </div>
+                 <p><strong>Mobile users:</strong> Make sure to allow camera permissions when prompted. If it doesn&apos;t work, try refreshing the page.</p>
+               </div>
+               <div className="flex items-start">
+                 <div className="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
+                   📱
+                 </div>
+                 <p><strong>Safari on iPhone:</strong> Make sure you&apos;re using HTTPS. If camera doesn&apos;t start, try tapping the screen or refreshing the page.</p>
+               </div>
             </div>
           </div>
         </div>
