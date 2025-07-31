@@ -330,8 +330,7 @@ export default function QRScanner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           code: qrCode,
-          eventId: selectedEvent,
-          allowReuse: false // Set to false to prevent re-scanning used codes
+          eventId: selectedEvent
         })
       })
 
@@ -367,10 +366,18 @@ export default function QRScanner() {
         stopScanning()
       } else {
         let errorMessage = result.error || 'Failed to validate QR code'
+        let guestInfo = undefined
         
-        // Provide more specific error messages
-        if (response.status === 409) {
-          errorMessage = 'QR code already used. For testing, you can reset it or use allowReuse=true'
+        // Provide more specific error messages with details
+        if (response.status === 409 && result.details) {
+          // QR code already used - show detailed information
+          const details = result.details
+          errorMessage = details.message || 'QR code already used'
+          
+          // Include guest information in the error result
+          if (details.guest) {
+            guestInfo = details.guest
+          }
         } else if (response.status === 404) {
           errorMessage = 'Invalid QR code or wrong event selected'
         }
@@ -378,13 +385,13 @@ export default function QRScanner() {
         setScanResult({
           success: false,
           message: errorMessage,
-          guest: undefined
+          guest: guestInfo
         })
         
-        // Auto-clear error result after 3 seconds
+        // Auto-clear error result after 5 seconds (longer for detailed errors)
         setTimeout(() => {
           setScanResult(null)
-        }, 3000)
+        }, 5000)
       }
           } catch (error) {
         console.error('Failed to validate QR code:', error)
@@ -645,22 +652,35 @@ export default function QRScanner() {
                          </span>
                        )}
                      </div>
-                                           {scanResult.guest.company && (
-                        <p className="text-sm text-gray-600">{scanResult.guest.company}</p>
-                      )}
-                      <p className="text-sm text-gray-500 mt-1">
-                        Checked in at {new Date().toLocaleTimeString()}
-                      </p>
-                      {scanResult.timeAgo && (
-                        <p className={`text-xs mt-1 ${
-                          scanResult.wasRecentlyUsed ? 'text-green-600' : 'text-gray-500'
-                        }`}>
-                          QR code used {scanResult.timeAgo}
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-1">
-                        Ready to scan next guest
-                      </p>
+                     {scanResult.guest.company && (
+                       <p className="text-sm text-gray-600">{scanResult.guest.company}</p>
+                     )}
+                     {scanResult.success ? (
+                       <>
+                         <p className="text-sm text-gray-500 mt-1">
+                           Checked in at {new Date().toLocaleTimeString()}
+                         </p>
+                         {scanResult.timeAgo && (
+                           <p className={`text-xs mt-1 ${
+                             scanResult.wasRecentlyUsed ? 'text-green-600' : 'text-gray-500'
+                           }`}>
+                             QR code used {scanResult.timeAgo}
+                           </p>
+                         )}
+                         <p className="text-xs text-gray-400 mt-1">
+                           Ready to scan next guest
+                         </p>
+                       </>
+                     ) : (
+                       <>
+                         <p className="text-sm text-red-600 mt-1">
+                           This guest has already been checked in
+                         </p>
+                         <p className="text-xs text-gray-500 mt-1">
+                           Please scan a different QR code
+                         </p>
+                       </>
+                     )}
                    </div>
                  )}
                  

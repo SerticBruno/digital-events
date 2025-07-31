@@ -15,6 +15,12 @@ export async function GET(
     const eventId = searchParams.get('eventId')
 
     console.log('Survey completion request for:', { guestId, eventId })
+    console.log('Environment variables:', {
+      NODE_ENV: process.env.NODE_ENV,
+      DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+      NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+      TEST_URL: process.env.TEST_URL
+    })
 
     if (!guestId || !eventId) {
       console.error('Missing required parameters:', { guestId, eventId })
@@ -33,16 +39,24 @@ export async function GET(
     console.log('Checking guest existence...')
     let guest
     try {
-      guest = await prisma.guest.findFirst({
-        where: {
-          id: guestId,
-          eventGuests: {
-            some: {
-              eventId: eventId
-            }
-          }
-        }
-      })
+      // Use raw SQL query similar to the survey send API for consistency
+      const guests = await prisma.$queryRaw<Array<{
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+      }>>`
+        SELECT g.id, g."firstName", g."lastName", g.email
+        FROM guests g
+        JOIN event_guests eg ON g.id = eg."guestId"
+        WHERE g.id = ${guestId}
+        AND eg."eventId" = ${eventId}
+        LIMIT 1
+      `
+      
+      console.log('SQL query result:', { guestId, eventId, guestsFound: guests.length, guests })
+      
+      guest = guests.length > 0 ? guests[0] : null
     } catch (dbError) {
       console.error('Database error when checking guest:', dbError)
       return NextResponse.json(
@@ -75,13 +89,22 @@ export async function GET(
     console.log('Checking survey invitation...')
     let surveyInvitation
     try {
-      surveyInvitation = await prisma.invitation.findFirst({
-        where: {
-          guestId: guestId,
-          eventId: eventId,
-          type: 'SURVEY'
-        }
-      })
+      // Use raw SQL query for consistency
+      const invitations = await prisma.$queryRaw<Array<{
+        id: string;
+        status: string;
+      }>>`
+        SELECT id, status
+        FROM invitations
+        WHERE "guestId" = ${guestId}
+        AND "eventId" = ${eventId}
+        AND type = 'SURVEY'
+        LIMIT 1
+      `
+      
+      console.log('Survey invitation query result:', { guestId, eventId, invitationsFound: invitations.length, invitations })
+      
+      surveyInvitation = invitations.length > 0 ? invitations[0] : null
     } catch (dbError) {
       console.error('Database error when checking survey invitation:', dbError)
       return NextResponse.json(
@@ -187,6 +210,14 @@ export async function GET(
     // Redirect to the actual survey form
     const surveyUrl = process.env.GOOGLE_FORM_URL || 'https://forms.google.com/your-form-id'
     console.log('Redirecting to survey URL:', surveyUrl)
+    
+    // Add additional debugging for the redirect
+    console.log('Final redirect details:', {
+      surveyUrl,
+      guestId,
+      eventId,
+      invitationId: surveyInvitation.id
+    })
     
     return NextResponse.redirect(surveyUrl)
   } catch (error) {
