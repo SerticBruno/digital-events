@@ -455,67 +455,118 @@ export default function QRScanner() {
           </div>
         </div>
 
-        {/* Camera View */}
-        {isScanning && (
-          <div className={componentStyles.card.base}>
-            <div className={componentStyles.card.header}>
-              <h2 className="text-lg font-medium text-gray-900">Camera View</h2>
-            </div>
-            <div className={componentStyles.card.content}>
-              <div className="relative">
-                                 <video
-                   ref={videoRef}
-                   autoPlay
-                   playsInline
-                   muted
-                   controls={false}
-                   webkit-playsinline="true"
-                   className="w-full max-w-2xl mx-auto rounded-lg border border-gray-300"
-                   style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
-                   onClick={() => {
-                     // Safari iOS sometimes needs a tap to start video
-                     if (videoRef.current && videoRef.current.paused) {
-                       console.log('Video tapped, attempting to play...')
-                       videoRef.current.play().catch(console.error)
-                     }
-                   }}
-                 />
-                <canvas
-                  ref={canvasRef}
-                  className="hidden"
-                />
-                {/* Scanning overlay */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="border-2 border-blue-500 rounded-lg p-8">
-                    <div className="w-64 h-64 border-2 border-blue-500 rounded-lg relative">
-                      <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500"></div>
-                      <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500"></div>
-                      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-500"></div>
-                      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-500"></div>
-                    </div>
-                  </div>
-                </div>
-                                 {/* Scanning indicator */}
-                 <div className="absolute top-4 right-4">
-                   <div className="flex items-center space-x-2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full">
-                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                     <span className="text-sm">Scanning...</span>
-                   </div>
-                 </div>
-                 
-                 {/* Safari iOS tap indicator */}
-                 {isSafari && isIOS && isVideoPaused && (
-                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-                     <div className="bg-white p-4 rounded-lg text-center">
-                       <p className="text-sm font-medium text-gray-800 mb-2">Camera Ready</p>
-                       <p className="text-xs text-gray-600">Tap the screen to start camera</p>
+                 {/* Camera Scanner Container */}
+         {isScanning && (
+           <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4">
+               {/* Header */}
+               <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                 <h3 className="text-lg font-semibold text-gray-900">QR Code Scanner</h3>
+                 <button
+                   onClick={stopScanning}
+                   className="text-gray-400 hover:text-gray-600 transition-colors"
+                 >
+                   <XCircle className="w-6 h-6" />
+                 </button>
+               </div>
+               
+               {/* Camera Container */}
+               <div className="p-4">
+                 <div className="relative bg-black rounded-lg overflow-hidden">
+                   {/* Video Element */}
+                   <video
+                     ref={videoRef}
+                     autoPlay
+                     playsInline
+                     muted
+                     controls={false}
+                     webkit-playsinline="true"
+                     className="w-full h-80 object-cover"
+                     style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
+                     onClick={() => {
+                       // Safari iOS sometimes needs a tap to start video
+                       if (videoRef.current && videoRef.current.paused) {
+                         console.log('Video tapped, attempting to play...')
+                         videoRef.current.play().catch(console.error)
+                       }
+                     }}
+                   />
+                   
+                   {/* Hidden Canvas for Processing */}
+                   <canvas
+                     ref={canvasRef}
+                     className="hidden"
+                   />
+                   
+                   {/* Scanning Frame Overlay */}
+                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                     <div className="relative">
+                       {/* Outer frame */}
+                       <div className="w-48 h-48 border-2 border-white rounded-lg relative">
+                         {/* Corner indicators */}
+                         <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-400 rounded-tl-lg"></div>
+                         <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-400 rounded-tr-lg"></div>
+                         <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-400 rounded-bl-lg"></div>
+                         <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-blue-400 rounded-br-lg"></div>
+                         
+                         {/* Scanning line animation */}
+                         <div className="absolute top-0 left-0 w-full h-0.5 bg-blue-400 animate-pulse"></div>
+                       </div>
+                       
+                       {/* Instructions */}
+                       <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 text-center">
+                         <p className="text-white text-sm font-medium bg-black bg-opacity-50 px-3 py-1 rounded-full">
+                           Position QR code in frame
+                         </p>
+                       </div>
                      </div>
                    </div>
-                 )}
-              </div>
-            </div>
-          </div>
-        )}
+                   
+                   {/* Status Indicator */}
+                   <div className="absolute top-3 right-3">
+                     <div className="flex items-center space-x-2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full">
+                       <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                       <span className="text-sm">Scanning...</span>
+                     </div>
+                   </div>
+                   
+                   {/* Safari iOS tap indicator */}
+                   {isSafari && isIOS && isVideoPaused && (
+                     <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                       <div className="bg-white p-4 rounded-lg text-center max-w-xs">
+                         <p className="text-sm font-medium text-gray-800 mb-2">Camera Ready</p>
+                         <p className="text-xs text-gray-600 mb-3">Tap the screen to start camera</p>
+                         <button
+                           onClick={() => {
+                             if (videoRef.current && videoRef.current.paused) {
+                               videoRef.current.play().catch(console.error)
+                             }
+                           }}
+                           className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition-colors"
+                         >
+                           Start Camera
+                         </button>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+                 
+                 {/* Footer Instructions */}
+                 <div className="mt-4 text-center">
+                   <p className="text-sm text-gray-600">
+                     Point your camera at the QR code to scan automatically
+                   </p>
+                   <button
+                     onClick={handleManualQRInput}
+                     className="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                   >
+                     Or enter code manually
+                   </button>
+                 </div>
+               </div>
+             </div>
+           </div>
+         )}
 
         {/* Camera Error */}
         {cameraError && (
@@ -545,66 +596,89 @@ export default function QRScanner() {
           </div>
         )}
 
-        {/* Scan Result */}
-        {scanResult && (
-          <div className={componentStyles.card.base}>
-            <div className={componentStyles.card.header}>
-              <h2 className="text-lg font-medium text-gray-900">Scan Result</h2>
-            </div>
-            <div className={componentStyles.card.content}>
-              <div className={`p-4 rounded-lg ${
-                scanResult.success 
-                  ? 'bg-green-50 border border-green-200' 
-                  : 'bg-red-50 border border-red-200'
-              }`}>
-                <div className="flex items-center">
-                  {scanResult.success ? (
-                    <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-600 mr-2" />
-                  )}
-                  <p className={`text-sm font-medium ${
-                    scanResult.success ? 'text-green-800' : 'text-red-800'
-                  }`}>
-                    {scanResult.message}
-                  </p>
-                </div>
-                
-                {scanResult.guest && (
-                  <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-                    <h3 className="font-medium text-gray-900 mb-2">Guest Information</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-600">Name:</span>
-                        <span className="ml-2 text-gray-900">
-                          {scanResult.guest.firstName} {scanResult.guest.lastName}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Email:</span>
-                        <span className="ml-2 text-gray-900">{scanResult.guest.email}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Company:</span>
-                        <span className="ml-2 text-gray-900">{scanResult.guest.company || 'N/A'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Type:</span>
-                        <span className={`ml-2 px-2 py-1 text-xs font-semibold rounded-full ${
-                          scanResult.guest.isVip 
-                            ? 'bg-yellow-100 text-yellow-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {scanResult.guest.isVip ? 'VIP' : 'Regular'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+                 {/* Scan Result Modal */}
+         {scanResult && (
+           <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4">
+               <div className="p-6 text-center">
+                 {/* Success Icon */}
+                 {scanResult.success ? (
+                   <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                     <CheckCircle className="w-8 h-8 text-green-600" />
+                   </div>
+                 ) : (
+                   <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                     <XCircle className="w-8 h-8 text-red-600" />
+                   </div>
+                 )}
+                 
+                 {/* Message */}
+                 <h3 className={`text-lg font-semibold mb-2 ${
+                   scanResult.success ? 'text-green-800' : 'text-red-800'
+                 }`}>
+                   {scanResult.success ? 'Check-in Successful!' : 'Scan Failed'}
+                 </h3>
+                 
+                 <p className="text-gray-600 mb-4">
+                   {scanResult.message}
+                 </p>
+                 
+                 {/* Guest Information */}
+                 {scanResult.guest && (
+                   <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                     <div className="flex items-center justify-center mb-2">
+                       <h4 className="font-medium text-gray-900">
+                         {scanResult.guest.firstName} {scanResult.guest.lastName}
+                       </h4>
+                       {scanResult.guest.isVip && (
+                         <span className="ml-2 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-semibold">
+                           VIP
+                         </span>
+                       )}
+                     </div>
+                     {scanResult.guest.company && (
+                       <p className="text-sm text-gray-600">{scanResult.guest.company}</p>
+                     )}
+                     <p className="text-sm text-gray-500 mt-1">
+                       Checked in at {new Date().toLocaleTimeString()}
+                     </p>
+                   </div>
+                 )}
+                 
+                 {/* Action Buttons */}
+                 <div className="flex gap-3">
+                   <button
+                     onClick={() => {
+                       setScanResult(null)
+                       if (scanResult.success) {
+                         stopScanning()
+                       }
+                     }}
+                     className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                       scanResult.success 
+                         ? 'bg-green-600 text-white hover:bg-green-700' 
+                         : 'bg-gray-600 text-white hover:bg-gray-700'
+                     }`}
+                   >
+                     {scanResult.success ? 'Done' : 'Try Again'}
+                   </button>
+                   
+                   {!scanResult.success && (
+                     <button
+                       onClick={() => {
+                         setScanResult(null)
+                         handleManualQRInput()
+                       }}
+                       className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                     >
+                       Manual Input
+                     </button>
+                   )}
+                 </div>
+               </div>
+             </div>
+           </div>
+         )}
 
         {/* Instructions */}
         <div className={componentStyles.card.base}>
