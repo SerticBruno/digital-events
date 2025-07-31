@@ -1226,9 +1226,13 @@ export async function sendQRCode(guestId: string, eventId?: string) {
     await updateQRCodeStatus(guestId, eventId || event.id, 'SENT')
   }
   
+  // Create validation URL for the QR code
+  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const validationUrl = `${baseUrl}/qr/validate/${qrCodeText}?eventId=${event.id}`
+  
   // Use external QR code service for better email compatibility
-  // For check-in QR codes, we use the actual QR code text, not a response URL
-  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeText)}`
+  // For check-in QR codes, we now use the validation URL instead of just the QR code text
+  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(validationUrl)}`
 
   const html = `
     <!DOCTYPE html>
@@ -1267,7 +1271,18 @@ export async function sendQRCode(guestId: string, eventId?: string) {
             <h3 style="color: #2d3748; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">Your Entry Pass</h3>
             <div style="background: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 30px; display: inline-block; margin: 20px 0;">
               <img src="${qrCodeImageUrl}" alt="QR Code" style="width: 200px; height: 200px; display: block; margin: 0 auto;">
-              <p style="color: #718096; font-size: 12px; margin: 10px 0 0 0; font-family: monospace;">${qrCodeText}</p>
+              <p style="color: #718096; font-size: 12px; margin: 10px 0 0 0; font-family: monospace;">Scan to check in automatically</p>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; text-align: center;">
+              <p style="margin: 0; color: #718096; font-size: 12px;">
+                <strong>Manual Entry:</strong> If scanning doesn't work, you can manually enter this code or visit the validation URL:
+              </p>
+              <p style="margin: 5px 0 0 0; font-family: monospace; font-size: 14px; color: #333; background: #f7fafc; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; display: inline-block;">
+                ${qrCodeText}
+              </p>
+              <p style="margin: 5px 0 0 0; font-size: 12px; color: #667eea;">
+                <a href="${validationUrl}" style="color: #667eea; text-decoration: underline;">Or click here to validate manually</a>
+              </p>
             </div>
           </div>
 
@@ -1577,9 +1592,13 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
   console.log('Plus-one QR code text type:', typeof qrCodeText)
   console.log('Plus-one QR code text length:', qrCodeText.length)
   
+  // Create validation URL for the QR code
+  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const validationUrl = `${baseUrl}/qr/validate/${qrCodeText}?eventId=${event.id}`
+  
   // Use external QR code service for better email compatibility
-  // For check-in QR codes, we use the actual QR code text, not a response URL
-  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeText)}`
+  // For check-in QR codes, we now use the validation URL instead of just the QR code text
+  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(validationUrl)}`
 
   const html = `
     <!DOCTYPE html>
@@ -1627,10 +1646,13 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
             </div>
             <div style="margin-top:15px;padding-top:15px;border-top:1px solid #ddd;text-align:center">
               <p style="margin:0;color:#666;font-size:12px">
-                <strong>Manual Entry:</strong> If scanning doesn't work, you can manually enter this code:
+                <strong>Manual Entry:</strong> If scanning doesn't work, you can manually enter this code or visit the validation URL:
               </p>
               <p style="margin:5px 0 0 0;font-family:monospace;font-size:14px;color:#333;background:#fff;padding:8px;border:1px solid #ccc;border-radius:4px;display:inline-block">
                 ${qrCodeText}
+              </p>
+              <p style="margin:5px 0 0 0;font-size:12px;color:#667eea;">
+                <a href="${validationUrl}" style="color:#667eea;text-decoration:underline;">Or click here to validate manually</a>
               </p>
             </div>
           </div>

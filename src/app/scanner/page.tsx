@@ -25,12 +25,18 @@ export default function QRScanner() {
   const [events, setEvents] = useState<Array<{ id: string; name: string; date: string; location?: string }>>([])
   const [cameraError, setCameraError] = useState<string>('')
   const [lastScannedCode, setLastScannedCode] = useState<string>('')
+  const [isRequestingCamera, setIsRequestingCamera] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scanningRef = useRef<boolean>(false)
 
   useEffect(() => {
     fetchEvents()
+    
+    // Check if we're on HTTPS (required for camera access)
+    if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      setCameraError('Camera access requires HTTPS. Please use a secure connection.')
+    }
   }, [])
 
   useEffect(() => {
@@ -50,20 +56,47 @@ export default function QRScanner() {
     }
   }
 
+  const checkCameraPermissions = async () => {
+    try {
+      const result = await navigator.permissions.query({ name: 'camera' as PermissionName })
+      return result.state
+    } catch (error) {
+      console.log('Permission API not supported, will try camera access directly')
+      return 'unknown'
+    }
+  }
+
   const startScanning = async () => {
     if (!selectedEvent) {
       alert('Please select an event first')
       return
     }
 
+    setIsRequestingCamera(true)
+    setCameraError('')
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      })
+      // Stop any existing stream first
+      if (videoRef.current?.srcObject) {
+        const existingStream = videoRef.current.srcObject as MediaStream
+        existingStream.getTracks().forEach(track => track.stop())
+      }
+
+      // Check camera permissions first
+      const permissionState = await checkCameraPermissions()
+      console.log('Camera permission state:', permissionState)
+
+      // Try to get camera access with mobile-friendly constraints
+      const constraints = {
+        video: {
+          facingMode: 'environment', // Use back camera on mobile
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 },
+          aspectRatio: { ideal: 4/3 }
+        }
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream
@@ -75,14 +108,44 @@ export default function QRScanner() {
         // Wait for video to load then start scanning
         videoRef.current.onloadedmetadata = () => {
           if (videoRef.current) {
-            videoRef.current.play()
-            scanLoop()
+            videoRef.current.play().then(() => {
+              console.log('Video started playing')
+              scanLoop()
+            }).catch((error) => {
+              console.error('Error playing video:', error)
+              setCameraError('Failed to start video stream. Please try again.')
+            })
           }
+        }
+
+        // Handle video errors
+        videoRef.current.onerror = (error) => {
+          console.error('Video error:', error)
+          setCameraError('Video stream error. Please try again.')
+          setIsRequestingCamera(false)
         }
       }
     } catch (error) {
       console.error('Camera access error:', error)
-      setCameraError('Unable to access camera. Please check permissions.')
+      let errorMessage = 'Unable to access camera. '
+      
+      if (error instanceof DOMException) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage += 'Please allow camera access in your browser settings and try again.'
+        } else if (error.name === 'NotFoundError') {
+          errorMessage += 'No camera found on this device.'
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage += 'Camera not supported on this device.'
+        } else {
+          errorMessage += error.message
+        }
+      } else {
+        errorMessage += 'Please check permissions and try again.'
+      }
+      
+      setCameraError(errorMessage)
+    } finally {
+      setIsRequestingCamera(false)
     }
   }
 
@@ -226,10 +289,20 @@ export default function QRScanner() {
               {!isScanning ? (
                 <button
                   onClick={startScanning}
+                  disabled={isRequestingCamera}
                   className={getButtonClasses('primary')}
                 >
-                  <Camera className="w-4 h-4" />
-                  Start Scanning
+                  {isRequestingCamera ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Requesting Camera...
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4" />
+                      Start Scanning
+                    </>
+                  )}
                 </button>
               ) : (
                 <button
@@ -273,7 +346,9 @@ export default function QRScanner() {
                   autoPlay
                   playsInline
                   muted
+                  controls={false}
                   className="w-full max-w-2xl mx-auto rounded-lg border border-gray-300"
+                  style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
                 />
                 <canvas
                   ref={canvasRef}
@@ -306,9 +381,25 @@ export default function QRScanner() {
         {cameraError && (
           <div className={componentStyles.card.base}>
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-                <p className="text-sm text-red-800">{cameraError}</p>
+              <div className="flex items-start justify-between">
+                <div className="flex items-start">
+                  <AlertCircle className="w-5 h-5 text-red-600 mr-2 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-red-800 mb-2">{cameraError}</p>
+                    <div className="text-xs text-red-600">
+                      <p>• Make sure you're using HTTPS (required for camera access)</p>
+                      <p>• Allow camera permissions when prompted</p>
+                      <p>• Try refreshing the page if permissions are stuck</p>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={startScanning}
+                  disabled={isRequestingCamera}
+                  className="ml-4 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isRequestingCamera ? 'Retrying...' : 'Retry'}
+                </button>
               </div>
             </div>
           </div>
@@ -411,6 +502,12 @@ export default function QRScanner() {
                   5
                 </div>
                 <p>If camera doesn&apos;t work, use &ldquo;Manual Input&rdquo; to enter the QR code manually</p>
+              </div>
+              <div className="flex items-start">
+                <div className="w-6 h-6 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
+                  !
+                </div>
+                <p><strong>Mobile users:</strong> Make sure to allow camera permissions when prompted. If it doesn&apos;t work, try refreshing the page.</p>
               </div>
             </div>
           </div>
