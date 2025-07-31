@@ -6,27 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('Survey send API called')
     
-    const bodyText = await request.text()
-    console.log('Request body text:', bodyText)
-    
-    if (!bodyText.trim()) {
-      console.error('Empty request body')
-      return NextResponse.json(
-        { error: 'Request body is required' },
-        { status: 400 }
-      )
-    }
-    
-    let body
-    try {
-      body = JSON.parse(bodyText)
-    } catch (parseError) {
-      console.error('Failed to parse request body:', parseError)
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
-      )
-    }
+    const body = await request.json()
     
     const { eventId } = body
 
