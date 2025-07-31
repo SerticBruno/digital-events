@@ -600,9 +600,6 @@ export async function sendRegularPlusOneInvitation(guestId: string, eventId?: st
     const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
     const responseUrl = `${baseUrl}/respond/${guestId}?eventId=${event.id}`
     
-    const comingUrl = `${responseUrl}&response=coming`
-    const notComingUrl = `${responseUrl}&response=not_coming`
-
     const html = `
       <!DOCTYPE html>
       <html>
