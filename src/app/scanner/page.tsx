@@ -305,36 +305,59 @@ export default function QRScanner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           code: qrCode,
-          eventId: selectedEvent 
+          eventId: selectedEvent,
+          allowReuse: false // Set to true for testing to allow re-scanning used codes
         })
       })
 
       const result = await response.json()
       
       if (response.ok && result.success) {
+        const wasAlreadyUsed = result.qrCode?.wasAlreadyUsed || false
+        const message = wasAlreadyUsed 
+          ? `Welcome back! ${result.guest.firstName} ${result.guest.lastName} was already checked in.`
+          : `Welcome! ${result.guest.firstName} ${result.guest.lastName} has been checked in successfully.`
+        
         setScanResult({
           success: true,
-          message: `Welcome! ${result.guest.firstName} ${result.guest.lastName} has been checked in successfully.`,
+          message,
           guest: result.guest
         })
+        
+        // Stop scanning when we get a successful result
+        stopScanning()
       } else {
+        let errorMessage = result.error || 'Failed to validate QR code'
+        
+        // Provide more specific error messages
+        if (response.status === 409) {
+          errorMessage = 'QR code already used. For testing, you can reset it or use allowReuse=true'
+        } else if (response.status === 404) {
+          errorMessage = 'Invalid QR code or wrong event selected'
+        }
+        
         setScanResult({
           success: false,
-          message: result.error || 'Failed to validate QR code',
+          message: errorMessage,
           guest: undefined
         })
+        
+        // Auto-clear error result after 3 seconds
+        setTimeout(() => {
+          setScanResult(null)
+        }, 3000)
       }
-      
-      // Auto-clear result after 5 seconds
-      setTimeout(() => {
-        setScanResult(null)
-      }, 5000)
     } catch (error) {
       console.error('Failed to validate QR code:', error)
       setScanResult({
         success: false,
         message: 'Failed to validate QR code'
       })
+      
+      // Auto-clear error result after 3 seconds
+      setTimeout(() => {
+        setScanResult(null)
+      }, 3000)
     }
   }
 
@@ -542,8 +565,8 @@ export default function QRScanner() {
 
                  {/* Scan Result Modal */}
          {scanResult && (
-           <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4">
+           <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-in fade-in duration-200">
+             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-200">
                <div className="p-6 text-center">
                  {/* Success Icon */}
                  {scanResult.success ? (
@@ -556,12 +579,12 @@ export default function QRScanner() {
                    </div>
                  )}
                  
-                 {/* Message */}
-                 <h3 className={`text-lg font-semibold mb-2 ${
-                   scanResult.success ? 'text-green-800' : 'text-red-800'
-                 }`}>
-                   {scanResult.success ? 'Check-in Successful!' : 'Scan Failed'}
-                 </h3>
+                                   {/* Message */}
+                  <h3 className={`text-lg font-semibold mb-2 ${
+                    scanResult.success ? 'text-green-800' : 'text-red-800'
+                  }`}>
+                    {scanResult.success ? '✅ Guest Checked In!' : 'Scan Failed'}
+                  </h3>
                  
                  <p className="text-gray-600 mb-4">
                    {scanResult.message}
@@ -583,42 +606,59 @@ export default function QRScanner() {
                      {scanResult.guest.company && (
                        <p className="text-sm text-gray-600">{scanResult.guest.company}</p>
                      )}
-                     <p className="text-sm text-gray-500 mt-1">
-                       Checked in at {new Date().toLocaleTimeString()}
-                     </p>
+                                           <p className="text-sm text-gray-500 mt-1">
+                        Checked in at {new Date().toLocaleTimeString()}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Ready to scan next guest
+                      </p>
                    </div>
                  )}
                  
-                 {/* Action Buttons */}
-                 <div className="flex gap-3">
-                   <button
-                     onClick={() => {
-                       setScanResult(null)
-                       if (scanResult.success) {
-                         stopScanning()
-                       }
-                     }}
-                     className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                       scanResult.success 
-                         ? 'bg-green-600 text-white hover:bg-green-700' 
-                         : 'bg-gray-600 text-white hover:bg-gray-700'
-                     }`}
-                   >
-                     {scanResult.success ? 'Done' : 'Try Again'}
-                   </button>
-                   
-                   {!scanResult.success && (
-                     <button
-                       onClick={() => {
-                         setScanResult(null)
-                         handleManualQRInput()
-                       }}
-                       className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                     >
-                       Manual Input
-                     </button>
-                   )}
-                 </div>
+                                   {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    {scanResult.success ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            setScanResult(null)
+                            startScanning()
+                          }}
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          Scan Next Guest
+                        </button>
+                        <button
+                          onClick={() => {
+                            setScanResult(null)
+                          }}
+                          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                        >
+                          Done
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setScanResult(null)
+                          }}
+                          className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors"
+                        >
+                          Try Again
+                        </button>
+                        <button
+                          onClick={() => {
+                            setScanResult(null)
+                            handleManualQRInput()
+                          }}
+                          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                        >
+                          Manual Input
+                        </button>
+                      </>
+                    )}
+                  </div>
                </div>
              </div>
            </div>
@@ -649,18 +689,24 @@ export default function QRScanner() {
                 </div>
                 <p>Point the camera at the guest&apos;s QR code within the blue frame</p>
               </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
-                  4
-                </div>
-                <p>The system will automatically detect and validate the QR code</p>
-              </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
-                  5
-                </div>
-                <p>If camera doesn&apos;t work, use &ldquo;Manual Input&rdquo; to enter the QR code manually</p>
-              </div>
+                             <div className="flex items-start">
+                 <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
+                   4
+                 </div>
+                 <p>The system will automatically detect and validate the QR code</p>
+               </div>
+               <div className="flex items-start">
+                 <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
+                   5
+                 </div>
+                 <p>After successful check-in, click &ldquo;Scan Next Guest&rdquo; to continue</p>
+               </div>
+                              <div className="flex items-start">
+                 <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
+                   6
+                 </div>
+                 <p>If camera doesn&apos;t work, use &ldquo;Manual Input&rdquo; to enter the QR code manually</p>
+               </div>
                              <div className="flex items-start">
                  <div className="w-6 h-6 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">
                    !

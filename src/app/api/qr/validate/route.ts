@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { code, eventId } = body
+    const { code, eventId, allowReuse = false } = body
 
     if (!code || !eventId) {
       return NextResponse.json(
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find QR code and check if it's valid and unused
+    // Find QR code - check for valid statuses
     const qrCodeRecord = await prisma.$queryRaw<Array<{
       id: string
       code: string
@@ -21,31 +21,48 @@ export async function POST(request: NextRequest) {
       status: string
       guestId: string
       eventId: string
+      usedAt: string | null
     }>>`
-      SELECT id, code, type, status, "guestId", "eventId"
+      SELECT id, code, type, status, "guestId", "eventId", "usedAt"
       FROM qr_codes 
       WHERE code = ${code} 
       AND "eventId" = ${eventId}
-      AND status IN ('SENT', 'GENERATED')
+      AND status IN ('SENT', 'GENERATED', 'USED')
     `
 
     if (qrCodeRecord.length === 0) {
       return NextResponse.json(
-        { error: 'Invalid or already used QR code' },
+        { error: 'Invalid QR code or wrong event' },
         { status: 404 }
       )
     }
 
     const qrCode = qrCodeRecord[0]
 
-    // Mark QR code as used using Prisma ORM
-    await prisma.qRCode.update({
-      where: { id: qrCode.id },
-      data: {
-        status: 'USED',
-        usedAt: new Date()
-      }
-    })
+    // Check if QR code is already used
+    if (qrCode.status === 'USED' && !allowReuse) {
+      return NextResponse.json(
+        { 
+          error: 'QR code already used',
+          details: {
+            usedAt: qrCode.usedAt,
+            message: 'This QR code has already been scanned. For testing, you can set allowReuse=true'
+          }
+        },
+        { status: 409 }
+      )
+    }
+
+    // Only update status if not already used
+    if (qrCode.status !== 'USED') {
+      await prisma.qRCode.update({
+        where: { id: qrCode.id },
+        data: {
+          status: 'USED',
+          usedAt: new Date()
+        }
+      })
+    }
 
     // Get guest information
     const guestRecord = await prisma.$queryRaw<Array<{
@@ -85,7 +102,8 @@ export async function POST(request: NextRequest) {
         code: qrCode.code,
         type: qrCode.type,
         status: 'USED',
-        usedAt: new Date().toISOString()
+        usedAt: qrCode.usedAt || new Date().toISOString(),
+        wasAlreadyUsed: qrCode.status === 'USED'
       }
     })
   } catch (error) {
