@@ -50,7 +50,7 @@ export async function sendEmail(data: EmailData) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+        from: 'onboarding@resend.dev',
         to: [data.to],
         subject: data.subject,
         html: data.html,
@@ -1704,54 +1704,63 @@ export async function sendSurvey(guestId: string, eventId?: string) {
   if (guests.length === 0) throw new Error('Guest not found')
   const guest = guests[0]
 
-  // Get event data using Prisma's type-safe queries (same as working invitation functions)
-  const eventGuest = await prisma.eventGuest.findFirst({
-    where: {
-      guestId: guestId,
-      ...(eventId && { eventId: eventId })
-    },
-    include: {
-      event: {
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          date: true,
-          location: true,
-          maxGuests: true
-        }
-      }
-    },
-    orderBy: {
-      event: {
-        date: 'asc'
-      }
-    }
-  })
+  // Get event data using raw SQL
+  let eventGuests: Array<{
+    eventId: string;
+    eventName: string;
+    eventDescription: string | null;
+    eventDate: string;
+    eventLocation: string | null;
+    eventMaxGuests: number | null;
+  }> = []
 
-  if (!eventGuest || !eventGuest.event) {
-    throw new Error(`Guest ${guestId} is not associated with any event${eventId ? ` or event ${eventId} not found` : ''}`)
+  if (eventId) {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg."eventId" = e.id
+      WHERE eg."guestId" = ${guestId}
+      AND e.id = ${eventId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
+  } else {
+    eventGuests = await prisma.$queryRaw`
+      SELECT 
+        e.id as eventId,
+        e.name as eventName,
+        e.description as eventDescription,
+        e.date as eventDate,
+        e.location as eventLocation,
+        e."maxGuests" as eventMaxGuests
+      FROM event_guests eg
+      JOIN events e ON eg."eventId" = e.id
+      WHERE eg."guestId" = ${guestId}
+      ORDER BY e.date ASC
+      LIMIT 1
+    `
   }
 
-  const eventData = eventGuest.event
+  if (eventGuests.length === 0) throw new Error('Guest not found in any event')
+  const eventData = eventGuests[0]
+
   const event = {
-    id: eventData.id,
-    name: eventData.name,
-    description: eventData.description,
-    date: eventData.date,
-    location: eventData.location,
-    maxGuests: eventData.maxGuests
+    id: eventData.eventId,
+    name: eventData.eventName,
+    description: eventData.eventDescription,
+    date: new Date(eventData.eventDate),
+    location: eventData.eventLocation,
+    maxGuests: eventData.eventMaxGuests
   }
   // Create tracking URL for survey completion
-  // Use VERCEL_URL in production, then TEST_URL, then NEXTAUTH_URL, then localhost
-  let baseUrl = 'http://localhost:3000'
-  if (process.env.VERCEL_URL) {
-    baseUrl = `https://${process.env.VERCEL_URL}`
-  } else if (process.env.TEST_URL) {
-    baseUrl = process.env.TEST_URL
-  } else if (process.env.NEXTAUTH_URL) {
-    baseUrl = process.env.NEXTAUTH_URL
-  }
+  // Use TEST_URL for surveys if available, otherwise fall back to NEXTAUTH_URL or localhost
+  const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
   const trackingUrl = `${baseUrl}/api/surveys/complete/${guest.id}?eventId=${event.id}`
   
   const html = `
