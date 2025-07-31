@@ -38,7 +38,7 @@ A comprehensive event management system for handling large-scale events with dig
 - **SQLite** - Development database (PostgreSQL for production)
 
 ### Email Service
-- **Resend** - Transactional email service
+- **SendGrid** - Transactional email service
 - **Custom HTML templates** - Professional email designs
 
 ### QR Codes
@@ -70,8 +70,11 @@ A comprehensive event management system for handling large-scale events with dig
    # Database
    DATABASE_URL="file:./dev.db"
    
-   # Email Service (Resend)
-   RESEND_API_KEY="your_resend_api_key_here"
+   # Email Service (SendGrid)
+SENDGRID_API_KEY="your_sendgrid_api_key_here"
+SENDGRID_FROM_EMAIL="noreply@yourdomain.com"
+SENDGRID_FROM_NAME="Event Team"
+SENDGRID_REPLY_TO="info@yourdomain.com"
    
    # App Configuration
    NEXTAUTH_SECRET="your_nextauth_secret_here"
@@ -158,7 +161,10 @@ src/
 ### Environment Variables for Production
 ```env
 DATABASE_URL="postgresql://username:password@host:port/database"
-RESEND_API_KEY="re_..."
+SENDGRID_API_KEY="SG.your_sendgrid_api_key_here"
+SENDGRID_FROM_EMAIL="noreply@yourdomain.com"
+SENDGRID_FROM_NAME="Event Team"
+SENDGRID_REPLY_TO="info@yourdomain.com"
 NEXTAUTH_SECRET="your-secret"
 NEXTAUTH_URL="https://yourdomain.com"
 GOOGLE_FORM_URL="https://forms.google.com/your-form-id"

@@ -12,22 +12,17 @@ export async function POST(request: NextRequest) {
     // Handle test emails (direct email sending)
     if (to && subject && html) {
       try {
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: 'onboarding@resend.dev',
-            to: [to],
-            html: html,
-          }),
+        const { sendSendGridEmail } = await import('@/lib/sendgrid')
+        
+        const result = await sendSendGridEmail({
+          to,
+          subject,
+          html,
+          from: process.env.SENDGRID_FROM_EMAIL
         })
 
-        if (!response.ok) {
-          const error = await response.text()
-          throw new Error(error)
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to send email')
         }
 
         return NextResponse.json({ success: true, message: 'Test email sent successfully' })

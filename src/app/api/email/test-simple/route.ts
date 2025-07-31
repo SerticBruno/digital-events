@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Testing email configuration...')
-    console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY)
+    console.log('SENDGRID_API_KEY exists:', !!process.env.SENDGRID_API_KEY)
     console.log('FROM_EMAIL:', process.env.FROM_EMAIL)
     console.log('Sending test email to:', to)
 
@@ -32,38 +32,29 @@ export async function POST(request: NextRequest) {
       </html>
     `
 
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'onboarding@resend.dev',
-        to: [to],
-        subject: 'Test Email - Digital Events System',
-        html: testHtml,
-      }),
+    const { sendSendGridEmail } = await import('@/lib/sendgrid')
+    
+    const result = await sendSendGridEmail({
+      to,
+      subject: 'Test Email - Digital Events System',
+      html: testHtml,
+      from: process.env.SENDGRID_FROM_EMAIL
     })
 
-    console.log('Resend API response status:', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Resend API error:', errorText)
+    if (!result.success) {
+      console.error('SendGrid API error:', result.error)
       return NextResponse.json({
-        error: `Email test failed: ${errorText}`,
-        status: response.status
+        error: `Email test failed: ${result.error}`,
+        status: 500
       }, { status: 500 })
     }
 
-    const responseData = await response.json()
-    console.log('Email test successful:', responseData)
+    console.log('Email test successful:', result.data)
 
     return NextResponse.json({
       success: true,
       message: 'Test email sent successfully',
-      data: responseData
+      data: result.data
     })
 
   } catch (error) {

@@ -5,7 +5,10 @@ export async function GET() {
   try {
     // Check environment variables
     const envCheck = {
-      RESEND_API_KEY: !!process.env.RESEND_API_KEY,
+      SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+      SENDGRID_FROM_EMAIL: !!process.env.SENDGRID_FROM_EMAIL,
+      SENDGRID_FROM_NAME: !!process.env.SENDGRID_FROM_NAME,
+      SENDGRID_REPLY_TO: !!process.env.SENDGRID_REPLY_TO,
       FROM_EMAIL: !!process.env.FROM_EMAIL,
       NEXTAUTH_URL: !!process.env.NEXTAUTH_URL,
       TEST_URL: !!process.env.TEST_URL

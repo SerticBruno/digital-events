@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { sendSendGridEmail, SendGridEmailData } from '@/lib/sendgrid'
 
 export interface EmailData {
   to: string
@@ -32,46 +33,26 @@ export async function sendTestEmail(to: string) {
 export async function sendEmail(data: EmailData) {
   try {
     console.log('sendEmail called with:', { to: data.to, subject: data.subject })
-    console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY)
+    console.log('SENDGRID_API_KEY exists:', !!process.env.SENDGRID_API_KEY)
     console.log('FROM_EMAIL:', process.env.FROM_EMAIL)
     
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY environment variable is not set')
+    if (!process.env.SENDGRID_API_KEY) {
+      throw new Error('SENDGRID_API_KEY environment variable is not set')
     }
 
     if (!data.to) {
       throw new Error('Recipient email address is required')
     }
 
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'onboarding@resend.dev',
-        to: [data.to],
-        subject: data.subject,
-        html: data.html,
-      }),
-    })
-
-    console.log('Resend API response status:', response.status)
-    console.log('Resend API response headers:', Object.fromEntries(response.headers.entries()))
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Resend API error response:', errorText)
-      console.error('Resend API response status:', response.status)
-      throw new Error(`Resend API error (${response.status}): ${errorText}`)
+    // Convert EmailData to SendGridEmailData
+    const sendGridData: SendGridEmailData = {
+      to: data.to,
+      subject: data.subject,
+      html: data.html,
+      from: data.from
     }
 
-    const responseData = await response.json()
-    console.log('Resend API success response:', responseData)
-
-    console.log('Email sent successfully')
-    return { success: true, data: responseData }
+    return await sendSendGridEmail(sendGridData)
   } catch (error) {
     console.error('Failed to send email:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
