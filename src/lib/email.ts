@@ -314,68 +314,50 @@ export async function sendRegularInvitation(guestId: string, eventId?: string) {
 
     console.log('Found guest:', { id: guest.id, name: `${guest.firstName} ${guest.lastName}`, email: guest.email })
 
-    // Get event data using raw SQL
-    let eventGuests: Array<{
-      eventId: string;
-      eventName: string;
-      eventDescription: string | null;
-      eventDate: string;
-      eventLocation: string | null;
-      eventMaxGuests: number | null;
-    }> = []
+    // Get event data using Prisma's type-safe queries (same as sendSaveTheDate)
+    const eventGuest = await prisma.eventGuest.findFirst({
+      where: {
+        guestId: guestId,
+        ...(eventId && { eventId: eventId })
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            date: true,
+            location: true,
+            maxGuests: true
+          }
+        }
+      },
+      orderBy: {
+        event: {
+          date: 'asc'
+        }
+      }
+    })
 
-    if (eventId) {
-      eventGuests = await prisma.$queryRaw`
-        SELECT 
-          e.id as eventId,
-          e.name as eventName,
-          e.description as eventDescription,
-          e.date as eventDate,
-          e.location as eventLocation,
-          e."maxGuests" as eventMaxGuests
-        FROM event_guests eg
-        JOIN events e ON eg."eventId" = e.id
-        WHERE eg."guestId" = ${guestId}
-        AND e.id = ${eventId}
-        ORDER BY e.date ASC
-        LIMIT 1
-      `
-    } else {
-      eventGuests = await prisma.$queryRaw`
-        SELECT 
-          e.id as eventId,
-          e.name as eventName,
-          e.description as eventDescription,
-          e.date as eventDate,
-          e.location as eventLocation,
-          e."maxGuests" as eventMaxGuests
-        FROM event_guests eg
-        JOIN events e ON eg."eventId" = e.id
-        WHERE eg."guestId" = ${guestId}
-        ORDER BY e.date ASC
-        LIMIT 1
-      `
-    }
+    console.log('Event query result:', eventGuest)
 
-    console.log('Event query result:', eventGuests)
-
-    if (eventGuests.length === 0) {
+    if (!eventGuest || !eventGuest.event) {
       throw new Error(`Guest ${guestId} is not associated with any event${eventId ? ` or event ${eventId} not found` : ''}`)
     }
-    const eventData = eventGuests[0]
 
-    console.log('Found event:', { id: eventData.eventId, name: eventData.eventName, date: eventData.eventDate })
+    const eventData = eventGuest.event
+    console.log('Found event:', { id: eventData.id, name: eventData.name, date: eventData.date })
 
-    // Parse the date safely
-    const eventDate = parseEventDate(eventData.eventDate)
+    // The date is already a Date object from Prisma, no need to parse
+    const eventDate = eventData.date
 
     const event = {
-      id: eventData.eventId,
-      name: eventData.eventName,
-      description: eventData.eventDescription,
+      id: eventData.id,
+      name: eventData.name,
+      description: eventData.description,
       date: eventDate,
-      location: eventData.eventLocation,
-      maxGuests: eventData.eventMaxGuests
+      location: eventData.location,
+      maxGuests: eventData.maxGuests
     }
 
     console.log('Processed event data:', { 
@@ -525,68 +507,50 @@ export async function sendRegularPlusOneInvitation(guestId: string, eventId?: st
 
     console.log('Found guest:', { id: guest.id, name: `${guest.firstName} ${guest.lastName}`, email: guest.email })
 
-    // Get event data using raw SQL
-    let eventGuests: Array<{
-      eventId: string;
-      eventName: string;
-      eventDescription: string | null;
-      eventDate: string;
-      eventLocation: string | null;
-      eventMaxGuests: number | null;
-    }> = []
+    // Get event data using Prisma's type-safe queries (same as sendSaveTheDate)
+    const eventGuest = await prisma.eventGuest.findFirst({
+      where: {
+        guestId: guestId,
+        ...(eventId && { eventId: eventId })
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            date: true,
+            location: true,
+            maxGuests: true
+          }
+        }
+      },
+      orderBy: {
+        event: {
+          date: 'asc'
+        }
+      }
+    })
 
-    if (eventId) {
-      eventGuests = await prisma.$queryRaw`
-        SELECT 
-          e.id as eventId,
-          e.name as eventName,
-          e.description as eventDescription,
-          e.date as eventDate,
-          e.location as eventLocation,
-          e."maxGuests" as eventMaxGuests
-        FROM event_guests eg
-        JOIN events e ON eg."eventId" = e.id
-        WHERE eg."guestId" = ${guestId}
-        AND e.id = ${eventId}
-        ORDER BY e.date ASC
-        LIMIT 1
-      `
-    } else {
-      eventGuests = await prisma.$queryRaw`
-        SELECT 
-          e.id as eventId,
-          e.name as eventName,
-          e.description as eventDescription,
-          e.date as eventDate,
-          e.location as eventLocation,
-          e."maxGuests" as eventMaxGuests
-        FROM event_guests eg
-        JOIN events e ON eg."eventId" = e.id
-        WHERE eg."guestId" = ${guestId}
-        ORDER BY e.date ASC
-        LIMIT 1
-      `
-    }
+    console.log('Event query result:', eventGuest)
 
-    console.log('Event query result:', eventGuests)
-
-    if (eventGuests.length === 0) {
+    if (!eventGuest || !eventGuest.event) {
       throw new Error(`Guest ${guestId} is not associated with any event${eventId ? ` or event ${eventId} not found` : ''}`)
     }
-    const eventData = eventGuests[0]
 
-    console.log('Found event:', { id: eventData.eventId, name: eventData.eventName, date: eventData.eventDate })
+    const eventData = eventGuest.event
+    console.log('Found event:', { id: eventData.id, name: eventData.name, date: eventData.date })
 
-    // Parse the date safely
-    const eventDate = parseEventDate(eventData.eventDate)
+    // The date is already a Date object from Prisma, no need to parse
+    const eventDate = eventData.date
 
     const event = {
-      id: eventData.eventId,
-      name: eventData.eventName,
-      description: eventData.eventDescription,
+      id: eventData.id,
+      name: eventData.name,
+      description: eventData.description,
       date: eventDate,
-      location: eventData.eventLocation,
-      maxGuests: eventData.eventMaxGuests
+      location: eventData.location,
+      maxGuests: eventData.maxGuests
     }
 
     console.log('Processed event data:', { 
@@ -718,77 +682,82 @@ export async function sendRegularPlusOneInvitation(guestId: string, eventId?: st
 }
 
 export async function sendVIPInvitation(guestId: string, eventId?: string) {
-  // Get guest data using raw SQL
-  const guests = await prisma.$queryRaw<Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    company: string | null;
-    isVip: boolean;
-  }>>`
-    SELECT id, "firstName", "lastName", email, company, "isVip"
-    FROM guests
-    WHERE id = ${guestId}
-  `
-
-  if (guests.length === 0) throw new Error('Guest not found')
-  const guest = guests[0]
-
-  // Get event data using raw SQL
-  let eventGuests: Array<{
-    eventId: string;
-    eventName: string;
-    eventDescription: string | null;
-    eventDate: string;
-    eventLocation: string | null;
-    eventMaxGuests: number | null;
-  }> = []
-
-  if (eventId) {
-    eventGuests = await prisma.$queryRaw`
-      SELECT 
-        e.id as eventId,
-        e.name as eventName,
-        e.description as eventDescription,
-        e.date as eventDate,
-        e.location as eventLocation,
-        e."maxGuests" as eventMaxGuests
-      FROM event_guests eg
-      JOIN events e ON eg." eventId\ = e.id
-      WHERE eg.\guestId\ = ${guestId}
-      AND e.id = ${eventId}
-      ORDER BY e.date ASC
-      LIMIT 1
+  try {
+    console.log('sendVIPInvitation called with:', { guestId, eventId })
+    
+    // Get guest data using raw SQL
+    const guests = await prisma.$queryRaw<Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      company: string | null;
+      isVip: boolean;
+    }>>`
+      SELECT id, "firstName", "lastName", email, company, "isVip"
+      FROM guests
+      WHERE id = ${guestId}
     `
-  } else {
-    eventGuests = await prisma.$queryRaw`
-      SELECT 
-        e.id as eventId,
-        e.name as eventName,
-        e.description as eventDescription,
-        e.date as eventDate,
-        e.location as eventLocation,
-        e."maxGuests" as eventMaxGuests
-      FROM event_guests eg
-      JOIN events e ON eg." eventId\ = e.id
-      WHERE eg.\guestId\ = ${guestId}
-      ORDER BY e.date ASC
-      LIMIT 1
-    `
-  }
 
-  if (eventGuests.length === 0) throw new Error('Guest not found in any event')
-  const eventData = eventGuests[0]
+    if (guests.length === 0) {
+      throw new Error(`Guest not found with ID: ${guestId}`)
+    }
+    const guest = guests[0]
 
-  const event = {
-    id: eventData.eventId,
-    name: eventData.eventName,
-    description: eventData.eventDescription,
-    date: new Date(eventData.eventDate),
-    location: eventData.eventLocation,
-    maxGuests: eventData.eventMaxGuests
-  }
+    console.log('Found guest:', { id: guest.id, name: `${guest.firstName} ${guest.lastName}`, email: guest.email })
+
+    // Get event data using Prisma's type-safe queries (same as sendSaveTheDate)
+    const eventGuest = await prisma.eventGuest.findFirst({
+      where: {
+        guestId: guestId,
+        ...(eventId && { eventId: eventId })
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            date: true,
+            location: true,
+            maxGuests: true
+          }
+        }
+      },
+      orderBy: {
+        event: {
+          date: 'asc'
+        }
+      }
+    })
+
+    console.log('Event query result:', eventGuest)
+
+    if (!eventGuest || !eventGuest.event) {
+      throw new Error(`Guest ${guestId} is not associated with any event${eventId ? ` or event ${eventId} not found` : ''}`)
+    }
+
+    const eventData = eventGuest.event
+    console.log('Found event:', { id: eventData.id, name: eventData.name, date: eventData.date })
+
+    // The date is already a Date object from Prisma, no need to parse
+    const eventDate = eventData.date
+
+    const event = {
+      id: eventData.id,
+      name: eventData.name,
+      description: eventData.description,
+      date: eventDate,
+      location: eventData.location,
+      maxGuests: eventData.maxGuests
+    }
+
+    console.log('Processed event data:', { 
+      id: event.id, 
+      name: event.name, 
+      date: eventDate.toISOString(),
+      location: event.location 
+    })
   // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
   const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
   const responseUrl = `${baseUrl}/respond/${guestId}?eventId=${event.id}`
@@ -896,80 +865,96 @@ export async function sendVIPInvitation(guestId: string, eventId?: string) {
     subject: `VIP Invitation: ${event.name}`,
     html
   })
+  } catch (error) {
+    console.error('Error in sendVIPInvitation:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('sendVIPInvitation error stack:', errorStack)
+    return { 
+      success: false, 
+      error: errorMessage,
+      errorDetails: errorStack ? errorStack.split('\n').slice(0, 3).join('\n') : undefined
+    }
+  }
 }
 
 export async function sendVIPPlusOneInvitation(guestId: string, eventId?: string) {
-  // Get guest data using raw SQL
-  const guests = await prisma.$queryRaw<Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    company: string | null;
-    isVip: boolean;
-  }>>`
-    SELECT id, "firstName", "lastName", email, company, "isVip"
-    FROM guests
-    WHERE id = ${guestId}
-  `
-
-  if (guests.length === 0) throw new Error('Guest not found')
-  const guest = guests[0]
-
-  // Get event data using raw SQL
-  let eventGuests: Array<{
-    eventId: string;
-    eventName: string;
-    eventDescription: string | null;
-    eventDate: string;
-    eventLocation: string | null;
-    eventMaxGuests: number | null;
-  }> = []
-
-  if (eventId) {
-    eventGuests = await prisma.$queryRaw`
-      SELECT 
-        e.id as eventId,
-        e.name as eventName,
-        e.description as eventDescription,
-        e.date as eventDate,
-        e.location as eventLocation,
-        e."maxGuests" as eventMaxGuests
-      FROM event_guests eg
-      JOIN events e ON eg." eventId\ = e.id
-      WHERE eg.\guestId\ = ${guestId}
-      AND e.id = ${eventId}
-      ORDER BY e.date ASC
-      LIMIT 1
+  try {
+    console.log('sendVIPPlusOneInvitation called with:', { guestId, eventId })
+    
+    // Get guest data using raw SQL
+    const guests = await prisma.$queryRaw<Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      company: string | null;
+      isVip: boolean;
+    }>>`
+      SELECT id, "firstName", "lastName", email, company, "isVip"
+      FROM guests
+      WHERE id = ${guestId}
     `
-  } else {
-    eventGuests = await prisma.$queryRaw`
-      SELECT 
-        e.id as eventId,
-        e.name as eventName,
-        e.description as eventDescription,
-        e.date as eventDate,
-        e.location as eventLocation,
-        e."maxGuests" as eventMaxGuests
-      FROM event_guests eg
-      JOIN events e ON eg." eventId\ = e.id
-      WHERE eg.\guestId\ = ${guestId}
-      ORDER BY e.date ASC
-      LIMIT 1
-    `
-  }
 
-  if (eventGuests.length === 0) throw new Error('Guest not found in any event')
-  const eventData = eventGuests[0]
+    if (guests.length === 0) {
+      throw new Error(`Guest not found with ID: ${guestId}`)
+    }
+    const guest = guests[0]
 
-  const event = {
-    id: eventData.eventId,
-    name: eventData.eventName,
-    description: eventData.eventDescription,
-    date: new Date(eventData.eventDate),
-    location: eventData.eventLocation,
-    maxGuests: eventData.eventMaxGuests
-  }
+    console.log('Found guest:', { id: guest.id, name: `${guest.firstName} ${guest.lastName}`, email: guest.email })
+
+    // Get event data using Prisma's type-safe queries (same as sendSaveTheDate)
+    const eventGuest = await prisma.eventGuest.findFirst({
+      where: {
+        guestId: guestId,
+        ...(eventId && { eventId: eventId })
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            date: true,
+            location: true,
+            maxGuests: true
+          }
+        }
+      },
+      orderBy: {
+        event: {
+          date: 'asc'
+        }
+      }
+    })
+
+    console.log('Event query result:', eventGuest)
+
+    if (!eventGuest || !eventGuest.event) {
+      throw new Error(`Guest ${guestId} is not associated with any event${eventId ? ` or event ${eventId} not found` : ''}`)
+    }
+
+    const eventData = eventGuest.event
+    console.log('Found event:', { id: eventData.id, name: eventData.name, date: eventData.date })
+
+    // The date is already a Date object from Prisma, no need to parse
+    const eventDate = eventData.date
+
+    const event = {
+      id: eventData.id,
+      name: eventData.name,
+      description: eventData.description,
+      date: eventDate,
+      location: eventData.location,
+      maxGuests: eventData.maxGuests
+    }
+
+    console.log('Processed event data:', { 
+      id: event.id, 
+      name: event.name, 
+      date: eventDate.toISOString(),
+      location: event.location 
+    })
   // Use TEST_URL for QR codes if available, otherwise fall back to NEXTAUTH_URL
   const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
   const responseUrl = `${baseUrl}/respond/${guestId}?eventId=${event.id}`
@@ -1085,80 +1070,96 @@ export async function sendVIPPlusOneInvitation(guestId: string, eventId?: string
     subject: `VIP Invitation: ${event.name}`,
     html
   })
+  } catch (error) {
+    console.error('Error in sendVIPPlusOneInvitation:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('sendVIPPlusOneInvitation error stack:', errorStack)
+    return { 
+      success: false, 
+      error: errorMessage,
+      errorDetails: errorStack ? errorStack.split('\n').slice(0, 3).join('\n') : undefined
+    }
+  }
 }
 
 export async function sendQRCode(guestId: string, eventId?: string) {
-  // Get guest data using raw SQL
-  const guests = await prisma.$queryRaw<Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    company: string | null;
-    isVip: boolean;
-  }>>`
-    SELECT id, "firstName", "lastName", email, company, "isVip"
-    FROM guests
-    WHERE id = ${guestId}
-  `
-
-  if (guests.length === 0) throw new Error('Guest not found')
-  const guest = guests[0]
-
-  // Get event data using raw SQL
-  let eventGuests: Array<{
-    eventId: string;
-    eventName: string;
-    eventDescription: string | null;
-    eventDate: string;
-    eventLocation: string | null;
-    eventMaxGuests: number | null;
-  }> = []
-
-  if (eventId) {
-    eventGuests = await prisma.$queryRaw`
-      SELECT 
-        e.id as eventId,
-        e.name as eventName,
-        e.description as eventDescription,
-        e.date as eventDate,
-        e.location as eventLocation,
-        e."maxGuests" as eventMaxGuests
-      FROM event_guests eg
-      JOIN events e ON eg." eventId\ = e.id
-      WHERE eg.\guestId\ = ${guestId}
-      AND e.id = ${eventId}
-      ORDER BY e.date ASC
-      LIMIT 1
+  try {
+    console.log('sendQRCode called with:', { guestId, eventId })
+    
+    // Get guest data using raw SQL
+    const guests = await prisma.$queryRaw<Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      company: string | null;
+      isVip: boolean;
+    }>>`
+      SELECT id, "firstName", "lastName", email, company, "isVip"
+      FROM guests
+      WHERE id = ${guestId}
     `
-  } else {
-    eventGuests = await prisma.$queryRaw`
-      SELECT 
-        e.id as eventId,
-        e.name as eventName,
-        e.description as eventDescription,
-        e.date as eventDate,
-        e.location as eventLocation,
-        e."maxGuests" as eventMaxGuests
-      FROM event_guests eg
-      JOIN events e ON eg." eventId\ = e.id
-      WHERE eg.\guestId\ = ${guestId}
-      ORDER BY e.date ASC
-      LIMIT 1
-    `
-  }
 
-  if (eventGuests.length === 0) throw new Error('Guest not found in any event')
-  const eventData = eventGuests[0]
+    if (guests.length === 0) {
+      throw new Error(`Guest not found with ID: ${guestId}`)
+    }
+    const guest = guests[0]
 
-  const event = {
-    id: eventData.eventId,
-    name: eventData.eventName,
-    description: eventData.eventDescription,
-    date: new Date(eventData.eventDate),
-    location: eventData.eventLocation,
-    maxGuests: eventData.eventMaxGuests
-  }
+    console.log('Found guest:', { id: guest.id, name: `${guest.firstName} ${guest.lastName}`, email: guest.email })
+
+    // Get event data using Prisma's type-safe queries (same as sendSaveTheDate)
+    const eventGuest = await prisma.eventGuest.findFirst({
+      where: {
+        guestId: guestId,
+        ...(eventId && { eventId: eventId })
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            date: true,
+            location: true,
+            maxGuests: true
+          }
+        }
+      },
+      orderBy: {
+        event: {
+          date: 'asc'
+        }
+      }
+    })
+
+    console.log('Event query result:', eventGuest)
+
+    if (!eventGuest || !eventGuest.event) {
+      throw new Error(`Guest ${guestId} is not associated with any event${eventId ? ` or event ${eventId} not found` : ''}`)
+    }
+
+    const eventData = eventGuest.event
+    console.log('Found event:', { id: eventData.id, name: eventData.name, date: eventData.date })
+
+    // The date is already a Date object from Prisma, no need to parse
+    const eventDate = eventData.date
+
+    const event = {
+      id: eventData.id,
+      name: eventData.name,
+      description: eventData.description,
+      date: eventDate,
+      location: eventData.location,
+      maxGuests: eventData.maxGuests
+    }
+
+    console.log('Processed event data:', { 
+      id: event.id, 
+      name: event.name, 
+      date: eventDate.toISOString(),
+      location: event.location 
+    })
 
   // Get QR codes using raw SQL
   let qrCodes: Array<{
