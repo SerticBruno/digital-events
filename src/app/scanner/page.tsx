@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { QrCode, CheckCircle, XCircle, AlertCircle, Camera, RotateCcw } from 'lucide-react'
+import { QrCode, CheckCircle, XCircle, AlertCircle, Camera } from 'lucide-react'
 import { getButtonClasses, getInputClasses, componentStyles } from '@/lib/design-system'
 import jsQR from 'jsqr'
 
@@ -119,7 +119,7 @@ export default function QRScanner() {
        let stream
        try {
          stream = await navigator.mediaDevices.getUserMedia(constraints)
-       } catch (error) {
+       } catch {
          // If first attempt fails, try with even simpler constraints
          console.log('First attempt failed, trying with minimal constraints...')
          const fallbackConstraints = {
@@ -338,12 +338,7 @@ export default function QRScanner() {
     }
   }
 
-  const resetScanner = () => {
-    stopScanning()
-    setScanResult(null)
-    setCameraError('')
-    setLastScannedCode('')
-  }
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -414,7 +409,7 @@ export default function QRScanner() {
                      <Camera className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                      <p className="text-lg font-medium mb-2">Camera Ready</p>
                      <p className="text-sm text-gray-300 mb-4">
-                       Click "Start Scanning" to begin
+                       Click &ldquo;Start Scanning&rdquo; to begin
                      </p>
                      <div className="w-48 h-48 border-2 border-gray-400 rounded-lg mx-auto relative opacity-50">
                        {/* Corner indicators */}
