@@ -35,12 +35,12 @@ export async function GET(
       )
     }
 
-    // Verify the guest exists and is associated with the event
+    // Verify the guest exists and check event association
     console.log('Checking guest existence...')
     let guest
     try {
-      // Use raw SQL query similar to the survey send API for consistency
-      const guests = await prisma.$queryRaw<Array<{
+      // First, check if the guest exists
+      const guestCheck = await prisma.$queryRaw<Array<{
         id: string;
         firstName: string;
         lastName: string;
@@ -48,19 +48,74 @@ export async function GET(
       }>>`
         SELECT g.id, g."firstName", g."lastName", g.email
         FROM guests g
-        JOIN event_guests eg ON g.id = eg."guestId"
         WHERE g.id = ${guestId}
+        LIMIT 1
+      `
+      
+      console.log('Guest check result:', { guestId, guestsFound: guestCheck.length, guest: guestCheck[0] })
+      
+      if (guestCheck.length === 0) {
+        console.error('Guest not found:', guestId)
+        return NextResponse.json(
+          { error: 'Guest not found' },
+          { 
+            status: 404,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        )
+      }
+      
+      guest = guestCheck[0]
+      
+      // Now check if the event exists
+      const eventCheck = await prisma.$queryRaw<Array<{
+        id: string;
+        name: string;
+      }>>`
+        SELECT e.id, e.name
+        FROM events e
+        WHERE e.id = ${eventId}
+        LIMIT 1
+      `
+      
+      console.log('Event check result:', { eventId, eventsFound: eventCheck.length, event: eventCheck[0] })
+      
+      if (eventCheck.length === 0) {
+        console.error('Event not found:', eventId)
+        return NextResponse.json(
+          { error: 'Event not found' },
+          { 
+            status: 404,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        )
+      }
+      
+      // Check if guest is associated with event (optional - for logging purposes)
+      const associationCheck = await prisma.$queryRaw<Array<{
+        guestId: string;
+        eventId: string;
+      }>>`
+        SELECT eg."guestId", eg."eventId"
+        FROM event_guests eg
+        WHERE eg."guestId" = ${guestId}
         AND eg."eventId" = ${eventId}
         LIMIT 1
       `
       
-      console.log('SQL query result:', { guestId, eventId, guestsFound: guests.length, guests })
+      console.log('Association check result:', { guestId, eventId, associationsFound: associationCheck.length })
       
-      guest = guests.length > 0 ? guests[0] : null
+      // Note: We don't require the association to exist, as surveys might be sent to guests
+      // who don't have a formal event_guests association
+      
     } catch (dbError) {
-      console.error('Database error when checking guest:', dbError)
+      console.error('Database error when checking guest/event:', dbError)
       return NextResponse.json(
-        { error: 'Database error when checking guest' },
+        { error: 'Database error when checking guest/event' },
         { 
           status: 500,
           headers: {
@@ -70,31 +125,21 @@ export async function GET(
       )
     }
 
-    console.log('Guest found:', guest ? 'Yes' : 'No')
-
-    if (!guest) {
-      console.error('Guest not found or not associated with event:', { guestId, eventId })
-      return NextResponse.json(
-        { error: 'Guest not found or not associated with this event' },
-        { 
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      )
-    }
+    console.log('Guest and event verification completed successfully')
 
     // Check if survey invitation exists
     console.log('Checking survey invitation...')
-    let surveyInvitation
+    let surveyInvitation: { id: string; status: string; eventId?: string } | null = null
+    let surveyEventId = eventId // Default to URL parameter
+    
     try {
-      // Use raw SQL query for consistency
+      // First try to find existing invitation
       const invitations = await prisma.$queryRaw<Array<{
         id: string;
         status: string;
+        eventId: string;
       }>>`
-        SELECT id, status
+        SELECT id, status, "eventId"
         FROM invitations
         WHERE "guestId" = ${guestId}
         AND "eventId" = ${eventId}
@@ -104,7 +149,31 @@ export async function GET(
       
       console.log('Survey invitation query result:', { guestId, eventId, invitationsFound: invitations.length, invitations })
       
-      surveyInvitation = invitations.length > 0 ? invitations[0] : null
+      if (invitations.length > 0) {
+        surveyInvitation = invitations[0]
+        surveyEventId = invitations[0].eventId
+      } else {
+        // If no invitation found, also try to find any survey invitation for this guest
+        const anyInvitation = await prisma.$queryRaw<Array<{
+          id: string;
+          status: string;
+          eventId: string;
+        }>>`
+          SELECT id, status, "eventId"
+          FROM invitations
+          WHERE "guestId" = ${guestId}
+          AND type = 'SURVEY'
+          LIMIT 1
+        `
+        
+        console.log('Any survey invitation query result:', { guestId, anyInvitationFound: anyInvitation.length, anyInvitation })
+        
+        if (anyInvitation.length > 0) {
+          surveyInvitation = anyInvitation[0]
+          surveyEventId = anyInvitation[0].eventId
+          console.log('Using existing survey invitation for different event:', anyInvitation[0].eventId)
+        }
+      }
     } catch (dbError) {
       console.error('Database error when checking survey invitation:', dbError)
       return NextResponse.json(
@@ -122,15 +191,35 @@ export async function GET(
 
     if (!surveyInvitation) {
       console.error('Survey invitation not found for:', { guestId, eventId })
-      return NextResponse.json(
-        { error: 'Survey invitation not found' },
-        { 
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json',
+      console.log('Creating survey invitation automatically...')
+      
+      // Create survey invitation automatically if it doesn't exist
+      try {
+        const newInvitation = await prisma.invitation.create({
+          data: {
+            type: 'SURVEY',
+            status: 'SENT',
+            sentAt: new Date(),
+            guestId: guestId,
+            eventId: eventId,
+            hasPlusOne: false
           }
-        }
-      )
+        })
+        
+        console.log('Created survey invitation:', newInvitation.id)
+        surveyInvitation = newInvitation
+      } catch (createError) {
+        console.error('Failed to create survey invitation:', createError)
+        return NextResponse.json(
+          { error: 'Failed to create survey invitation' },
+          { 
+            status: 500,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        )
+      }
     }
 
     // Check if survey is already completed
@@ -159,11 +248,13 @@ export async function GET(
       newSurvey = await prisma.survey.create({
         data: {
           guestId: guestId,
-          eventId: eventId,
+          eventId: surveyEventId,
           rating: 0, // Default rating, will be updated when they actually complete the form
           feedback: 'Survey link clicked - completion tracked'
         }
       })
+      
+      console.log('Survey record created with event ID:', surveyEventId)
     } catch (dbError) {
       console.error('Database error when creating survey record:', dbError)
       return NextResponse.json(
