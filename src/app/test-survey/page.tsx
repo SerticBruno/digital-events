@@ -71,6 +71,78 @@ export default function TestSurvey() {
     }
   }
 
+  const testSurveySend = async () => {
+    if (!guestId || !eventId) {
+      alert('Please enter both Guest ID and Event ID')
+      return
+    }
+
+    setLoading(true)
+    setResult(null)
+
+    try {
+      const response = await fetch('/api/surveys/test-send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          guestId,
+          eventId
+        })
+      })
+      const data = await response.json()
+      
+      setResult({
+        status: response.status,
+        statusText: response.statusText,
+        data: data
+      })
+    } catch (error) {
+      setResult({
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const testEventLookup = async () => {
+    if (!guestId || !eventId) {
+      alert('Please enter both Guest ID and Event ID')
+      return
+    }
+
+    setLoading(true)
+    setResult(null)
+
+    try {
+      const response = await fetch('/api/debug/test-event-lookup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          guestId,
+          eventId
+        })
+      })
+      const data = await response.json()
+      
+      setResult({
+        status: response.status,
+        statusText: response.statusText,
+        data: data
+      })
+    } catch (error) {
+      setResult({
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -122,6 +194,22 @@ export default function TestSurvey() {
               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
             >
               {loading ? 'Testing...' : 'Test Survey Debug'}
+            </button>
+            
+            <button
+              onClick={testSurveySend}
+              disabled={loading}
+              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
+            >
+              {loading ? 'Testing...' : 'Test Survey Send'}
+            </button>
+            
+            <button
+              onClick={testEventLookup}
+              disabled={loading}
+              className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
+            >
+              {loading ? 'Testing...' : 'Test Event Lookup'}
             </button>
           </div>
         </div>

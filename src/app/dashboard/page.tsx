@@ -427,6 +427,7 @@ export default function Dashboard() {
   }
 
   const clearSelection = () => {
+    console.log('Clearing guest selection')
     setSelectedGuests(new Set())
   }
 
@@ -933,6 +934,59 @@ export default function Dashboard() {
     }
   }
 
+  const debugSelectedGuests = async () => {
+    if (selectedGuests.size === 0) {
+      alert('No guests selected')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/guests/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          guestIds: Array.from(selectedGuests), 
+          eventId: selectedEvent?.id 
+        })
+      })
+      const result = await response.json()
+      
+      if (response.ok) {
+        console.log('Debug result:', result)
+        
+        const existingGuests = result.results.filter((r: any) => r.exists)
+        const missingGuests = result.results.filter((r: any) => !r.exists)
+        
+        let message = `Debug Results:\n\n`
+        message += `Total selected: ${result.totalGuests}\n`
+        message += `Existing guests: ${existingGuests.length}\n`
+        message += `Missing guests: ${missingGuests.length}\n\n`
+        
+        if (existingGuests.length > 0) {
+          message += `Existing guests:\n`
+          existingGuests.forEach((r: any) => {
+            message += `- ${r.guest.firstName} ${r.guest.lastName} (${r.guest.email})\n`
+          })
+          message += `\n`
+        }
+        
+        if (missingGuests.length > 0) {
+          message += `Missing guest IDs:\n`
+          missingGuests.forEach((r: any) => {
+            message += `- ${r.guestId}\n`
+          })
+        }
+        
+        alert(message)
+      } else {
+        alert(`Debug error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to debug guests:', error)
+      alert('Failed to debug guests')
+    }
+  }
+
   const sendRegularInvitations = async (guestIds: string[]) => {
     if (!selectedEvent) {
       alert('Please select an event first')
@@ -943,6 +997,9 @@ export default function Dashboard() {
       alert('Please select at least one guest')
       return
     }
+
+    console.log('Sending regular invitations to guests:', guestIds)
+    console.log('Selected event:', selectedEvent.name)
 
     setSendingEmails(true)
     try {
@@ -1600,6 +1657,13 @@ export default function Dashboard() {
                       >
                         <Download className="w-3 h-3" />
                         Export
+                      </button>
+                      <button
+                        onClick={debugSelectedGuests}
+                        disabled={selectedGuests.size === 0}
+                        className="px-2 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 disabled:opacity-50"
+                      >
+                        Debug
                       </button>
                       <button
                         onClick={deleteSelectedGuests}

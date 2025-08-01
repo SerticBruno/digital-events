@@ -21,6 +21,16 @@ export async function GET(
       NEXTAUTH_URL: process.env.NEXTAUTH_URL,
       TEST_URL: process.env.TEST_URL
     })
+    
+    // Debug: Let's also check what events exist in the database
+    try {
+      const allEvents = await prisma.$queryRaw<Array<{ id: string; name: string }>>`
+        SELECT id, name FROM events ORDER BY name
+      `
+      console.log('All events in database:', allEvents)
+    } catch (error) {
+      console.error('Error fetching all events:', error)
+    }
 
     if (!guestId || !eventId) {
       console.error('Missing required parameters:', { guestId, eventId })
@@ -70,6 +80,7 @@ export async function GET(
       guest = guestCheck[0]
       
       // Now check if the event exists
+      console.log('Checking for event with ID:', eventId)
       const eventCheck = await prisma.$queryRaw<Array<{
         id: string;
         name: string;
@@ -81,6 +92,21 @@ export async function GET(
       `
       
       console.log('Event check result:', { eventId, eventsFound: eventCheck.length, event: eventCheck[0] })
+      
+      // Also try a case-insensitive search to see if there's a case mismatch
+      if (eventCheck.length === 0) {
+        console.log('Event not found with exact ID, trying case-insensitive search...')
+        const caseInsensitiveCheck = await prisma.$queryRaw<Array<{
+          id: string;
+          name: string;
+        }>>`
+          SELECT e.id, e.name
+          FROM events e
+          WHERE LOWER(e.id) = LOWER(${eventId})
+          LIMIT 1
+        `
+        console.log('Case-insensitive event check result:', { eventId, eventsFound: caseInsensitiveCheck.length, event: caseInsensitiveCheck[0] })
+      }
       
       if (eventCheck.length === 0) {
         console.error('Event not found:', eventId)

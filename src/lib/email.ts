@@ -157,8 +157,8 @@ export async function sendSaveTheDate(guestId: string, eventId?: string) {
       <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 2px;">SAVE THE DATE</h1>
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 2px;">Save the Date</h1>
             <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">You're invited to a special event</p>
           </div>
 
@@ -1697,12 +1697,19 @@ export async function sendSurvey(guestId: string, eventId?: string) {
 
   // Get event data using raw SQL
   let eventGuests: Array<{
-    eventId: string;
-    eventName: string;
-    eventDescription: string | null;
-    eventDate: string;
-    eventLocation: string | null;
-    eventMaxGuests: number | null;
+    eventId?: string;
+    eventName?: string;
+    eventDescription?: string | null;
+    eventDate?: string;
+    eventLocation?: string | null;
+    eventMaxGuests?: number | null;
+    // Also support lowercase field names from database
+    eventid?: string;
+    eventname?: string;
+    eventdescription?: string | null;
+    eventdate?: string;
+    eventlocation?: string | null;
+    eventmaxguests?: number | null;
   }> = []
 
   if (eventId) {
@@ -1770,18 +1777,43 @@ export async function sendSurvey(guestId: string, eventId?: string) {
   }
   const eventData = eventGuests[0]
 
+  console.log('Event data retrieved:', {
+    eventId: eventData.eventid || eventData.eventId,
+    eventName: eventData.eventname || eventData.eventName,
+    eventDescription: eventData.eventdescription || eventData.eventDescription,
+    eventDate: eventData.eventdate || eventData.eventDate,
+    eventLocation: eventData.eventlocation || eventData.eventLocation,
+    eventMaxGuests: eventData.eventmaxguests || eventData.eventMaxGuests
+  })
+
   const event = {
-    id: eventData.eventId,
-    name: eventData.eventName,
-    description: eventData.eventDescription,
-    date: new Date(eventData.eventDate),
-    location: eventData.eventLocation,
-    maxGuests: eventData.eventMaxGuests
+    id: eventData.eventid || eventData.eventId || '',
+    name: eventData.eventname || eventData.eventName || '',
+    description: eventData.eventdescription || eventData.eventDescription || null,
+    date: new Date(eventData.eventdate || eventData.eventDate || new Date()),
+    location: eventData.eventlocation || eventData.eventLocation || null,
+    maxGuests: eventData.eventmaxguests || eventData.eventMaxGuests || null
   }
+
+  console.log('Event object created:', {
+    id: event.id,
+    name: event.name,
+    description: event.description,
+    date: event.date,
+    location: event.location,
+    maxGuests: event.maxGuests
+  })
   // Create tracking URL for survey completion
   // Use TEST_URL for surveys if available, otherwise fall back to NEXTAUTH_URL or localhost
   const baseUrl = process.env.TEST_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
   const trackingUrl = `${baseUrl}/api/surveys/complete/${guest.id}?eventId=${event.id}`
+  
+  console.log('Survey URL details:', {
+    baseUrl,
+    guestId: guest.id,
+    eventId: event.id,
+    trackingUrl
+  })
   
   const html = `
     <!DOCTYPE html>
@@ -1870,9 +1902,12 @@ export async function sendSurvey(guestId: string, eventId?: string) {
     </html>
   `
 
+  const emailSubject = `Feedback Request: ${event.name}`
+  console.log('Email subject created:', emailSubject)
+  
   return sendEmail({
     to: guest.email,
-    subject: `Feedback Request: ${event.name}`,
+    subject: emailSubject,
     html
   })
   } catch (error) {
