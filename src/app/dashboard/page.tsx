@@ -954,8 +954,8 @@ export default function Dashboard() {
       if (response.ok) {
         console.log('Debug result:', result)
         
-        const existingGuests = result.results.filter((r: any) => r.exists)
-        const missingGuests = result.results.filter((r: any) => !r.exists)
+        const existingGuests = result.results.filter((r: { exists: boolean }) => r.exists)
+        const missingGuests = result.results.filter((r: { exists: boolean }) => !r.exists)
         
         let message = `Debug Results:\n\n`
         message += `Total selected: ${result.totalGuests}\n`
@@ -964,7 +964,7 @@ export default function Dashboard() {
         
         if (existingGuests.length > 0) {
           message += `Existing guests:\n`
-          existingGuests.forEach((r: any) => {
+          existingGuests.forEach((r: { guest: { firstName: string; lastName: string; email: string } }) => {
             message += `- ${r.guest.firstName} ${r.guest.lastName} (${r.guest.email})\n`
           })
           message += `\n`
@@ -972,7 +972,7 @@ export default function Dashboard() {
         
         if (missingGuests.length > 0) {
           message += `Missing guest IDs:\n`
-          missingGuests.forEach((r: any) => {
+          missingGuests.forEach((r: { guestId: string }) => {
             message += `- ${r.guestId}\n`
           })
         }

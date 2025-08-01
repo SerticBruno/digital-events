@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Testing event lookup for:', { guestId, eventId })
 
-    const results: any = {}
+    const results: Record<string, unknown> = {}
 
     // Test 1: Direct event query (like in sendSurvey)
     try {

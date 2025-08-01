@@ -77,7 +77,7 @@ export async function GET(
         )
       }
       
-      guest = guestCheck[0]
+      const guestData = guestCheck[0]
       
       // Now check if the event exists
       console.log('Checking for event with ID:', eventId)
