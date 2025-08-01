@@ -61,7 +61,7 @@ export async function GET(
         LIMIT 1
       `
       
-      console.log('Guest check result:', { guestId, guestsFound: guestCheck.length, guest: guestCheck[0] })
+      console.log('Guest check result:', { guestId, guestsFound: guestCheck.length, guestData: guestCheck[0] })
       
       if (guestCheck.length === 0) {
         console.error('Guest not found:', guestId)
