@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 
 export async function validateQRCode(code: string, eventId: string) {
   try {
-    // Find QR code and check if it's valid and unused
+    // Find QR code - check for valid statuses including used ones
     const qrCodeRecord = await prisma.$queryRaw<Array<{
       id: string
       code: string
@@ -11,28 +11,45 @@ export async function validateQRCode(code: string, eventId: string) {
       status: string
       guestId: string
       eventId: string
+      usedAt: string | null
     }>>`
-      SELECT id, code, type, status, "guestId", "eventId"
+      SELECT id, code, type, status, "guestId", "eventId", "usedAt"
       FROM qr_codes 
       WHERE code = ${code} 
       AND "eventId" = ${eventId}
-      AND status IN ('SENT', 'GENERATED')
+      AND status IN ('SENT', 'GENERATED', 'USED')
     `
 
     if (qrCodeRecord.length === 0) {
-      return { valid: false, message: 'Invalid or already used QR code' }
+      return { valid: false, message: 'Invalid QR code or wrong event' }
     }
 
     const qrCode = qrCodeRecord[0]
 
-    // Mark QR code as used using Prisma ORM
-    await prisma.qRCode.update({
-      where: { id: qrCode.id },
-      data: {
-        status: 'USED',
-        usedAt: new Date()
+    // Check if QR code is already used
+    if (qrCode.status === 'USED') {
+      const usedAt = qrCode.usedAt ? new Date(qrCode.usedAt) : null
+      const now = new Date()
+      const timeDiff = usedAt ? (now.getTime() - usedAt.getTime()) / 1000 : 0 // seconds
+      
+      // If used more than 5 seconds ago, return error
+      if (timeDiff > 5) {
+        return { valid: false, message: 'QR code already used' }
       }
-    })
+      // If used within 5 seconds, treat it as a successful re-scan
+      console.log(`QR code used ${timeDiff.toFixed(1)} seconds ago, allowing re-scan`)
+    }
+
+    // Only update status if not already used
+    if (qrCode.status !== 'USED') {
+      await prisma.qRCode.update({
+        where: { id: qrCode.id },
+        data: {
+          status: 'USED',
+          usedAt: new Date()
+        }
+      })
+    }
 
     // Get guest information
     const guestRecord = await prisma.$queryRaw<Array<{
@@ -54,6 +71,12 @@ export async function validateQRCode(code: string, eventId: string) {
 
     const guest = guestRecord[0]
 
+    // Determine if this was a recent re-scan
+    const usedAt = qrCode.usedAt ? new Date(qrCode.usedAt) : null
+    const now = new Date()
+    const timeDiff = usedAt ? (now.getTime() - usedAt.getTime()) / 1000 : 0
+    const wasRecentlyUsed = qrCode.status === 'USED' && timeDiff <= 5
+
     return {
       valid: true,
       guest: {
@@ -69,7 +92,9 @@ export async function validateQRCode(code: string, eventId: string) {
         code: qrCode.code,
         type: qrCode.type,
         status: 'USED',
-        usedAt: new Date().toISOString()
+        usedAt: qrCode.usedAt || new Date().toISOString(),
+        wasAlreadyUsed: qrCode.status === 'USED',
+        wasRecentlyUsed: wasRecentlyUsed
       }
     }
   } catch (error) {

@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
 
       const guest = guestRecord.length > 0 ? guestRecord[0] : null
       
-      // If used more than 15 seconds ago, show detailed error
-      if (timeDiff > 15) {
+      // If used more than 5 seconds ago, show detailed error
+      if (timeDiff > 5) {
         const formattedTime = usedAt ? usedAt.toLocaleString() : 'Unknown time'
         const timeAgo = formatTimeAgo(timeDiff)
         
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         )
       }
-      // If used within 15 seconds, treat it as a successful re-scan
+      // If used within 5 seconds, treat it as a successful re-scan
       console.log(`QR code used ${timeDiff.toFixed(1)} seconds ago, allowing re-scan`)
     }
 
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     const usedAt = qrCode.usedAt ? new Date(qrCode.usedAt) : null
     const now = new Date()
     const timeDiff = usedAt ? (now.getTime() - usedAt.getTime()) / 1000 : 0
-    const wasRecentlyUsed = qrCode.status === 'USED' && timeDiff <= 15
+    const wasRecentlyUsed = qrCode.status === 'USED' && timeDiff <= 5
 
     return NextResponse.json({
       success: true,
