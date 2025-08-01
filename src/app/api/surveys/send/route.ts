@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Send survey email
+        console.log(`Sending survey to guest: ${guest.firstName} ${guest.lastName} (${guest.id}) for event: ${eventId}`)
         const result = await sendSurvey(guest.id, eventId)
         
         if (result.success) {
@@ -119,6 +120,7 @@ export async function POST(request: NextRequest) {
             message: 'Survey sent successfully'
           })
         } else {
+          console.error(`Failed to send survey to ${guest.firstName} ${guest.lastName}:`, result.error)
           totalFailures++
           results.push({
             guestId: guest.id,

@@ -1668,22 +1668,32 @@ export async function sendPlusOneQRCode(guestId: string, plusOneEmail: string, p
 }
 
 export async function sendSurvey(guestId: string, eventId?: string) {
-  // Get guest data using raw SQL
-  const guests = await prisma.$queryRaw<Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    company: string | null;
-    isVip: boolean;
-  }>>`
-    SELECT id, "firstName", "lastName", email, company, "isVip"
-    FROM guests
-    WHERE id = ${guestId}
-  `
+  try {
+    console.log('sendSurvey called with:', { guestId, eventId })
+    
+    // Get guest data using raw SQL
+    const guests = await prisma.$queryRaw<Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      company: string | null;
+      isVip: boolean;
+    }>>`
+      SELECT id, "firstName", "lastName", email, company, "isVip"
+      FROM guests
+      WHERE id = ${guestId}
+    `
 
-  if (guests.length === 0) throw new Error('Guest not found')
-  const guest = guests[0]
+    console.log('Guest query result:', guests)
+
+    if (guests.length === 0) {
+      console.error('Guest not found:', guestId)
+      throw new Error(`Guest not found with ID: ${guestId}`)
+    }
+    const guest = guests[0]
+    
+    console.log('Found guest:', { id: guest.id, name: `${guest.firstName} ${guest.lastName}`, email: guest.email })
 
   // Get event data using raw SQL
   let eventGuests: Array<{
@@ -1696,7 +1706,15 @@ export async function sendSurvey(guestId: string, eventId?: string) {
   }> = []
 
   if (eventId) {
-    eventGuests = await prisma.$queryRaw`
+    // First try to get the specific event directly
+    const directEventQuery = await prisma.$queryRaw<Array<{
+      eventId: string;
+      eventName: string;
+      eventDescription: string | null;
+      eventDate: string;
+      eventLocation: string | null;
+      eventMaxGuests: number | null;
+    }>>`
       SELECT 
         e.id as eventId,
         e.name as eventName,
@@ -1704,13 +1722,31 @@ export async function sendSurvey(guestId: string, eventId?: string) {
         e.date as eventDate,
         e.location as eventLocation,
         e."maxGuests" as eventMaxGuests
-      FROM event_guests eg
-      JOIN events e ON eg."eventId" = e.id
-      WHERE eg."guestId" = ${guestId}
-      AND e.id = ${eventId}
-      ORDER BY e.date ASC
+      FROM events e
+      WHERE e.id = ${eventId}
       LIMIT 1
     `
+    
+    if (directEventQuery.length > 0) {
+      eventGuests = directEventQuery
+    } else {
+      // Fallback to checking if guest is associated with this event
+      eventGuests = await prisma.$queryRaw`
+        SELECT 
+          e.id as eventId,
+          e.name as eventName,
+          e.description as eventDescription,
+          e.date as eventDate,
+          e.location as eventLocation,
+          e."maxGuests" as eventMaxGuests
+        FROM event_guests eg
+        JOIN events e ON eg."eventId" = e.id
+        WHERE eg."guestId" = ${guestId}
+        AND e.id = ${eventId}
+        ORDER BY e.date ASC
+        LIMIT 1
+      `
+    }
   } else {
     eventGuests = await prisma.$queryRaw`
       SELECT 
@@ -1728,7 +1764,10 @@ export async function sendSurvey(guestId: string, eventId?: string) {
     `
   }
 
-  if (eventGuests.length === 0) throw new Error('Guest not found in any event')
+  if (eventGuests.length === 0) {
+    console.error('No event found for guest:', { guestId, eventId, guest: guest.firstName + ' ' + guest.lastName })
+    throw new Error(`Guest ${guest.firstName} ${guest.lastName} not found in any event`)
+  }
   const eventData = eventGuests[0]
 
   const event = {
@@ -1836,4 +1875,12 @@ export async function sendSurvey(guestId: string, eventId?: string) {
     subject: `Feedback Request: ${event.name}`,
     html
   })
+  } catch (error) {
+    console.error('Error in sendSurvey:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    return { 
+      success: false, 
+      error: errorMessage
+    }
+  }
 } 

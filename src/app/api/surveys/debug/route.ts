@@ -1,93 +1,162 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const guestId = searchParams.get('guestId')
-    const eventId = searchParams.get('eventId')
+    console.log('Survey debug API called')
+    
+    const body = await request.json()
+    const { eventId, guestId } = body
 
-    console.log('Survey debug request for:', { guestId, eventId })
+    console.log('Debug request for:', { eventId, guestId })
 
-    if (!guestId || !eventId) {
+    if (!eventId) {
       return NextResponse.json(
-        { error: 'Guest ID and Event ID are required as query parameters' },
+        { error: 'Event ID is required' },
         { status: 400 }
       )
     }
 
-    // Test 1: Check if guest exists
-    const guest = await prisma.guest.findUnique({
-      where: { id: guestId },
-      select: { id: true, firstName: true, lastName: true, email: true }
-    })
-
-    // Test 2: Check if event exists
+    // Test 1: Check if event exists
+    console.log('Test 1: Checking if event exists...')
     const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      select: { id: true, name: true }
+      where: { id: eventId }
     })
+    
+    console.log('Event found:', event ? { id: event.id, name: event.name } : 'NOT FOUND')
 
-    // Test 3: Check if guest is associated with event
-    const eventGuest = await prisma.eventGuest.findFirst({
-      where: {
-        guestId: guestId,
-        eventId: eventId
+    // Test 2: Get all guests for this event
+    console.log('Test 2: Getting all guests for this event...')
+    const eventGuests = await prisma.eventGuest.findMany({
+      where: { eventId },
+      include: {
+        guest: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
       }
     })
+    
+    console.log(`Found ${eventGuests.length} guests for event`)
 
-    // Test 4: Check if survey invitation exists
-    const surveyInvitation = await prisma.invitation.findFirst({
-      where: {
-        guestId: guestId,
-        eventId: eventId,
-        type: 'SURVEY'
-      }
-    })
-
-    // Test 5: Use raw SQL query (same as survey completion endpoint)
-    const rawQueryResult = await prisma.$queryRaw<Array<{
-      id: string;
-      firstName: string;
-      lastName: string;
-      email: string;
+    // Test 3: Get guests with used QR codes
+    console.log('Test 3: Getting guests with used QR codes...')
+    const guestsWithUsedQRCodes = await prisma.$queryRaw<Array<{
+      id: string
+      firstName: string
+      lastName: string
+      email: string
+      qrCodeId: string
+      qrCodeUsedAt: string
     }>>`
-      SELECT g.id, g."firstName", g."lastName", g.email
+      SELECT 
+        g.id,
+        g."firstName",
+        g."lastName",
+        g.email,
+        q.id as "qrCodeId",
+        q."usedAt" as "qrCodeUsedAt"
       FROM guests g
       JOIN event_guests eg ON g.id = eg."guestId"
-      WHERE g.id = ${guestId}
-      AND eg."eventId" = ${eventId}
-      LIMIT 1
+      JOIN qr_codes q ON g.id = q."guestId" AND eg."eventId" = q."eventId"
+      WHERE eg."eventId" = ${eventId}
+      AND q.status = 'USED'
+      AND q."usedAt" IS NOT NULL
+      ORDER BY g."lastName", g."firstName"
     `
 
-    const result = {
-      guestId,
-      eventId,
-      tests: {
-        guestExists: !!guest,
-        eventExists: !!event,
-        guestEventAssociation: !!eventGuest,
-        surveyInvitationExists: !!surveyInvitation,
-        rawQueryWorks: rawQueryResult.length > 0
-      },
-      details: {
-        guest,
-        event,
-        eventGuest,
-        surveyInvitation,
-        rawQueryResult
-      },
-      environment: {
-        NODE_ENV: process.env.NODE_ENV,
-        DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
-        NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-        TEST_URL: process.env.TEST_URL
+    console.log(`Found ${guestsWithUsedQRCodes.length} guests with used QR codes`)
+
+    // Test 4: If guestId provided, test specific guest
+    let specificGuestData = null
+    if (guestId) {
+      console.log('Test 4: Testing specific guest...')
+      
+      // Get guest data
+      const guest = await prisma.guest.findUnique({
+        where: { id: guestId }
+      })
+      
+      if (guest) {
+        // Get event data for this guest
+        const guestEvent = await prisma.eventGuest.findFirst({
+          where: {
+            guestId,
+            eventId
+          },
+          include: {
+            event: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                date: true,
+                location: true
+              }
+            }
+          }
+        })
+        
+        specificGuestData = {
+          guest: {
+            id: guest.id,
+            firstName: guest.firstName,
+            lastName: guest.lastName,
+            email: guest.email
+          },
+          event: guestEvent?.event || null,
+          isAssociatedWithEvent: !!guestEvent
+        }
       }
     }
 
-    console.log('Survey debug result:', result)
+    // Test 5: Check existing survey invitations
+    console.log('Test 5: Checking existing survey invitations...')
+    const existingInvitations = await prisma.invitation.findMany({
+      where: {
+        eventId,
+        type: 'SURVEY'
+      },
+      include: {
+        guest: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
+    })
 
-    return NextResponse.json(result)
+    console.log(`Found ${existingInvitations.length} existing survey invitations`)
+
+    return NextResponse.json({
+      success: true,
+      debug: {
+        event: event ? { id: event.id, name: event.name, date: event.date } : null,
+        totalGuestsForEvent: eventGuests.length,
+        guestsWithUsedQRCodes: guestsWithUsedQRCodes.length,
+        specificGuest: specificGuestData,
+        existingSurveyInvitations: existingInvitations.length,
+        sampleGuests: guestsWithUsedQRCodes.slice(0, 3).map(g => ({
+          id: g.id,
+          name: `${g.firstName} ${g.lastName}`,
+          email: g.email,
+          qrUsedAt: g.qrCodeUsedAt
+        })),
+        sampleInvitations: existingInvitations.slice(0, 3).map(i => ({
+          id: i.id,
+          guestName: `${i.guest.firstName} ${i.guest.lastName}`,
+          status: i.status,
+          sentAt: i.sentAt
+        }))
+      }
+    })
   } catch (error) {
     console.error('Survey debug error:', error)
     return NextResponse.json(
