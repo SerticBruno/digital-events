@@ -47,7 +47,6 @@ export async function GET(
 
     // Verify the guest exists and check event association
     console.log('Checking guest existence...')
-    let guest
     try {
       // First, check if the guest exists
       const guestCheck = await prisma.$queryRaw<Array<{
@@ -76,8 +75,6 @@ export async function GET(
           }
         )
       }
-      
-      const guestData = guestCheck[0]
       
       // Now check if the event exists
       console.log('Checking for event with ID:', eventId)
