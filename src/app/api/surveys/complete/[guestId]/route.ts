@@ -21,19 +21,8 @@ export async function GET(
       NEXTAUTH_URL: process.env.NEXTAUTH_URL,
       TEST_URL: process.env.TEST_URL
     })
-    
-    // Debug: Let's also check what events exist in the database
-    try {
-      const allEvents = await prisma.$queryRaw<Array<{ id: string; name: string }>>`
-        SELECT id, name FROM events ORDER BY name
-      `
-      console.log('All events in database:', allEvents)
-    } catch (error) {
-      console.error('Error fetching all events:', error)
-    }
 
     if (!guestId || !eventId) {
-      console.error('Missing required parameters:', { guestId, eventId })
       return NextResponse.json(
         { error: 'Guest ID and Event ID are required' },
         { 
@@ -45,10 +34,7 @@ export async function GET(
       )
     }
 
-    // Verify the guest exists and check event association
-    console.log('Checking guest existence...')
     try {
-      // First, check if the guest exists
       const guestCheck = await prisma.$queryRaw<Array<{
         id: string;
         firstName: string;

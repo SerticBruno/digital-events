@@ -29,7 +29,6 @@ export default function CSVUpload({ onUpload }: CSVUploadProps) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
-    console.log('File selected:', selectedFile) // Debug log
     
     if (!selectedFile) return
 
@@ -169,7 +168,6 @@ export default function CSVUpload({ onUpload }: CSVUploadProps) {
           }
         }
 
-        console.log('Uploading guests:', guests) // Debug log
         await onUpload(guests)
         setSuccess(`Successfully uploaded ${guests.length} guests`)
         setFile(null)
@@ -177,7 +175,6 @@ export default function CSVUpload({ onUpload }: CSVUploadProps) {
       }
       reader.readAsText(file)
     } catch (error) {
-      console.error('Upload error:', error) // Debug log
       setError('Failed to upload CSV file')
     } finally {
       setIsUploading(false)
@@ -317,7 +314,6 @@ Jane,Smith,jane.smith@example.com,Another Corp,Director,+1234567891,true`
         <div className="flex justify-end">
           <button
             onClick={() => {
-              console.log('Upload button clicked, file:', file) // Debug log
               handleUpload()
             }}
             disabled={isUploading}

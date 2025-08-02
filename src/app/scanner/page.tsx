@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { QrCode, CheckCircle, XCircle, AlertCircle, Camera, Clock } from 'lucide-react'
+import { QrCode, CheckCircle, XCircle, AlertCircle, Camera, Clock, X } from 'lucide-react'
 import { getButtonClasses, getInputClasses, componentStyles } from '@/lib/design-system'
 import jsQR from 'jsqr'
 
@@ -346,13 +346,6 @@ export default function QRScanner() {
       const result = await response.json()
       const processingTime = Date.now() - validationStartTime
       
-      console.log(`[${Date.now()}] Validation response received in ${processingTime}ms:`, {
-        status: response.status,
-        success: result.success,
-        error: result.error,
-        debug: result.debug
-      })
-      
       if (response.ok && result.success) {
         const wasAlreadyUsed = result.qrCode?.wasAlreadyUsed || false
         const wasRecentlyUsed = result.qrCode?.wasRecentlyUsed || false
@@ -387,8 +380,8 @@ export default function QRScanner() {
           wasRecentlyUsed
         })
         
-        // Stop scanning when we get a successful result
-        stopScanning()
+        // Don't stop scanning - let user manually dismiss the result
+        // stopScanning()
       } else {
         let errorMessage = result.error || 'Failed to validate QR code'
         let guestInfo = undefined
@@ -436,10 +429,10 @@ export default function QRScanner() {
           timeAgo: timeAgoInfo
         })
         
-        // Auto-clear error result after 5 seconds (longer for detailed errors)
-        setTimeout(() => {
-          setScanResult(null)
-        }, 5000)
+        // Don't auto-clear error results - let user manually dismiss
+        // setTimeout(() => {
+        //   setScanResult(null)
+        // }, 5000)
       }
     } catch (error) {
       const processingTime = Date.now() - validationStartTime
@@ -450,10 +443,10 @@ export default function QRScanner() {
         message: 'Failed to validate QR code - network error'
       })
       
-      // Auto-clear error result after 3 seconds
-      setTimeout(() => {
-        setScanResult(null)
-      }, 3000)
+      // Don't auto-clear network error results - let user manually dismiss
+      // setTimeout(() => {
+      //   setScanResult(null)
+      // }, 3000)
     } finally {
       setIsValidating(false)
       console.log(`[${Date.now()}] Validation completed for QR code: ${qrCode} (total time: ${Date.now() - validationStartTime}ms)`)
@@ -665,7 +658,15 @@ export default function QRScanner() {
                  {/* Scan Result Modal */}
          {scanResult && (
            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-in fade-in duration-200">
-             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-200">
+             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-200 relative">
+               {/* Close Button */}
+               <button
+                 onClick={() => setScanResult(null)}
+                 className="absolute top-3 right-3 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                 aria-label="Close"
+               >
+                 <X className="w-5 h-5" />
+               </button>
                <div className="p-6 text-center">
                  {/* Success Icon */}
                  {scanResult.success ? (
@@ -735,7 +736,7 @@ export default function QRScanner() {
                            </p>
                          )}
                          <p className="text-xs text-gray-400 mt-1">
-                           Ready to scan next guest
+                           Ready to scan next guest • Click &quot;Scan Next Guest&quot; to continue
                          </p>
                        </>
                      ) : (

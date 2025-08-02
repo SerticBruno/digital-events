@@ -290,3 +290,120 @@ export async function activateAllQRCodesForGuest(guestId: string, eventId: strin
     }
   }
 } 
+
+export async function resetQRCodeForReuse(qrCodeId: string) {
+  try {
+    // Reset QR code status to SENT so it can be used again
+    await prisma.qRCode.update({
+      where: { id: qrCodeId },
+      data: {
+        status: 'SENT',
+        usedAt: null
+      }
+    })
+
+    return {
+      success: true,
+      message: 'QR code reset for reuse'
+    }
+  } catch (error) {
+    console.error('Error resetting QR code for reuse:', error)
+    return {
+      success: false,
+      error: 'Failed to reset QR code for reuse'
+    }
+  }
+}
+
+export async function resetAllQRCodesForEvent(eventId: string) {
+  try {
+    // Reset all USED QR codes for an event back to SENT status
+    const result = await prisma.qRCode.updateMany({
+      where: {
+        eventId,
+        status: 'USED'
+      },
+      data: {
+        status: 'SENT',
+        usedAt: null
+      }
+    })
+
+    return {
+      success: true,
+      message: `Reset ${result.count} QR codes for event`,
+      count: result.count
+    }
+  } catch (error) {
+    console.error('Error resetting QR codes for event:', error)
+    return {
+      success: false,
+      error: 'Failed to reset QR codes for event'
+    }
+  }
+}
+
+export async function resetQRCodeForGuest(guestId: string, eventId: string) {
+  try {
+    // Reset QR code for a specific guest and event
+    const result = await prisma.qRCode.updateMany({
+      where: {
+        guestId,
+        eventId,
+        status: 'USED'
+      },
+      data: {
+        status: 'SENT',
+        usedAt: null
+      }
+    })
+
+    return {
+      success: true,
+      message: `Reset ${result.count} QR codes for guest`,
+      count: result.count
+    }
+  } catch (error) {
+    console.error('Error resetting QR code for guest:', error)
+    return {
+      success: false,
+      error: 'Failed to reset QR code for guest'
+    }
+  }
+}
+
+export async function getQRCodeHistory(guestId: string, eventId: string) {
+  try {
+    // Get all QR codes for a guest and event, including usage history
+    const qrCodes = await prisma.qRCode.findMany({
+      where: {
+        guestId,
+        eventId
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      select: {
+        id: true,
+        code: true,
+        type: true,
+        status: true,
+        usedAt: true,
+        createdAt: true
+      }
+    })
+
+    return {
+      success: true,
+      qrCodes,
+      totalScans: qrCodes.filter(qr => qr.status === 'USED').length,
+      currentStatus: qrCodes[0]?.status || 'NONE'
+    }
+  } catch (error) {
+    console.error('Error getting QR code history:', error)
+    return {
+      success: false,
+      error: 'Failed to get QR code history'
+    }
+  }
+} 
