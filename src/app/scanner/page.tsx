@@ -285,9 +285,15 @@ export default function QRScanner() {
     })
 
     if (code && code.data !== lastScannedCode && !isValidating) {
-      console.log('QR Code detected:', code.data)
-      setLastScannedCode(code.data)
-      validateQRCode(code.data)
+      console.log(`[${Date.now()}] QR Code detected: ${code.data}`)
+      
+      // Add a small delay to prevent rapid successive scans
+      setTimeout(() => {
+        if (scanningRef.current && !isValidating) {
+          setLastScannedCode(code.data)
+          validateQRCode(code.data)
+        }
+      }, 100) // 100ms delay to prevent race conditions
     }
 
     // Continue scanning
@@ -316,13 +322,16 @@ export default function QRScanner() {
   }
 
   const validateQRCode = async (qrCode: string) => {
+    // Use a more robust validation state check with a ref to prevent race conditions
     if (isValidating) {
-      console.log('Validation already in progress, skipping...')
+      console.log('Validation already in progress, skipping QR code:', qrCode)
       return
     }
     
+    // Set validation state immediately to prevent race conditions
     setIsValidating(true)
-    console.log('Starting validation for QR code:', qrCode)
+    const validationStartTime = Date.now()
+    console.log(`[${Date.now()}] Starting validation for QR code: ${qrCode}`)
     
     try {
       const response = await fetch('/api/qr/validate', {
@@ -335,32 +344,48 @@ export default function QRScanner() {
       })
 
       const result = await response.json()
+      const processingTime = Date.now() - validationStartTime
       
-             if (response.ok && result.success) {
-         const wasAlreadyUsed = result.qrCode?.wasAlreadyUsed || false
-         const wasRecentlyUsed = result.qrCode?.wasRecentlyUsed || false
-         
-         // Calculate time since QR code was used
-         const usedAt = result.qrCode?.usedAt ? new Date(result.qrCode.usedAt) : new Date()
-         const now = new Date()
-         const timeDiff = Math.floor((now.getTime() - usedAt.getTime()) / 1000) // seconds
-         
-         let message
-         if (wasRecentlyUsed) {
-           message = `Welcome back! ${result.guest.firstName} ${result.guest.lastName} was just checked in.`
-         } else if (wasAlreadyUsed) {
-           message = `Welcome back! ${result.guest.firstName} ${result.guest.lastName} was already checked in.`
-         } else {
-           message = `Welcome! ${result.guest.firstName} ${result.guest.lastName} has been checked in successfully.`
-         }
+      console.log(`[${Date.now()}] Validation response received in ${processingTime}ms:`, {
+        status: response.status,
+        success: result.success,
+        error: result.error,
+        debug: result.debug
+      })
+      
+      if (response.ok && result.success) {
+        const wasAlreadyUsed = result.qrCode?.wasAlreadyUsed || false
+        const wasRecentlyUsed = result.qrCode?.wasRecentlyUsed || false
         
-                 setScanResult({
-           success: true,
-           message,
-           guest: result.guest,
-           timeAgo: formatTimeAgo(timeDiff),
-           wasRecentlyUsed
-         })
+        // Calculate time since QR code was used
+        const usedAt = result.qrCode?.usedAt ? new Date(result.qrCode.usedAt) : new Date()
+        const now = new Date()
+        const timeDiff = Math.floor((now.getTime() - usedAt.getTime()) / 1000) // seconds
+        
+        let message
+        if (wasRecentlyUsed) {
+          message = `Welcome back! ${result.guest.firstName} ${result.guest.lastName} was just checked in.`
+        } else if (wasAlreadyUsed) {
+          message = `Welcome back! ${result.guest.firstName} ${result.guest.lastName} was already checked in.`
+        } else {
+          message = `Welcome! ${result.guest.firstName} ${result.guest.lastName} has been checked in successfully.`
+        }
+        
+        console.log(`[${Date.now()}] Validation successful:`, {
+          guest: `${result.guest.firstName} ${result.guest.lastName}`,
+          wasAlreadyUsed,
+          wasRecentlyUsed,
+          timeDiff,
+          processingTime
+        })
+        
+        setScanResult({
+          success: true,
+          message,
+          guest: result.guest,
+          timeAgo: formatTimeAgo(timeDiff),
+          wasRecentlyUsed
+        })
         
         // Stop scanning when we get a successful result
         stopScanning()
@@ -368,6 +393,7 @@ export default function QRScanner() {
         let errorMessage = result.error || 'Failed to validate QR code'
         let guestInfo = undefined
         let timeAgoInfo = undefined
+        let debugInfo = undefined
         
         // Provide more specific error messages with details
         if (response.status === 409 && result.details) {
@@ -386,7 +412,22 @@ export default function QRScanner() {
           }
         } else if (response.status === 404) {
           errorMessage = 'Invalid QR code or wrong event selected'
+        } else if (response.status === 408) {
+          errorMessage = 'QR code validation timeout - please try again'
         }
+        
+        // Include debug information if available
+        if (result.debug) {
+          debugInfo = result.debug
+          console.log(`[${Date.now()}] Validation failed with debug info:`, debugInfo)
+        }
+        
+        console.log(`[${Date.now()}] Validation failed:`, {
+          status: response.status,
+          error: errorMessage,
+          processingTime,
+          debug: debugInfo
+        })
         
         setScanResult({
           success: false,
@@ -400,21 +441,23 @@ export default function QRScanner() {
           setScanResult(null)
         }, 5000)
       }
-          } catch (error) {
-        console.error('Failed to validate QR code:', error)
-        setScanResult({
-          success: false,
-          message: 'Failed to validate QR code'
-        })
-        
-        // Auto-clear error result after 3 seconds
-        setTimeout(() => {
-          setScanResult(null)
-        }, 3000)
-      } finally {
-        setIsValidating(false)
-        console.log('Validation completed for QR code:', qrCode)
-      }
+    } catch (error) {
+      const processingTime = Date.now() - validationStartTime
+      console.error(`[${Date.now()}] Failed to validate QR code after ${processingTime}ms:`, error)
+      
+      setScanResult({
+        success: false,
+        message: 'Failed to validate QR code - network error'
+      })
+      
+      // Auto-clear error result after 3 seconds
+      setTimeout(() => {
+        setScanResult(null)
+      }, 3000)
+    } finally {
+      setIsValidating(false)
+      console.log(`[${Date.now()}] Validation completed for QR code: ${qrCode} (total time: ${Date.now() - validationStartTime}ms)`)
+    }
   }
 
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Calendar, Users, QrCode, Home, Mail } from 'lucide-react'
+import { Calendar, Users, QrCode, Home, Mail, Bug } from 'lucide-react'
 
 export default function Navigation() {
   const pathname = usePathname()
@@ -13,6 +13,7 @@ export default function Navigation() {
     { href: '/guests', label: 'Guests', icon: Users },
     { href: '/scanner', label: 'Scanner', icon: QrCode },
     { href: '/test-sendgrid', label: 'SendGrid Test', icon: Mail },
+    { href: '/debug/qr-codes', label: 'Debug QR', icon: Bug },
   ]
 
   return (
